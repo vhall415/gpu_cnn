@@ -35,17 +35,17 @@ void save_image(const char* output_filename, float* buffer, int height, int widt
 int main(int argc, char* argv[]) {
     Timer timer;
 
-    // initialize host variables ----------------------------------------------
-
     printf("\nSetting up the problem...");
     fflush(stdout);
     startTime(&timer);
 
-    // initialize device variables --------------------------------------------
+    cv::Mat img = load_image("./tensor_flow.png");
     
     // create handle for cudnn
     cudnnHandle_t cudnn;
     checkCUDNN(cudnnCreate(&cudnn));
+
+    // start of first convolutional layer -------------------------------------
 
     // create/set input tensor descriptor
     cudnnTensorDescriptor_t in_desc;
@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
     checkCUDNN(cudnnGetConvolution2dForwardOutputDim(conv_desc,
                                                      in_desc,
                                                      kernel_desc,
-                                                     &bathc_size,
+                                                     &batch_size,
                                                      &channels,
                                                      &height,
                                                      &width));
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
                                            /*image_height=*/image.rows,
                                            /*image_width=*/image.cols));
 
-    // forward convolution ----------------------------------------------------
+    // forward convolution algorithm ------------------------------------------
     cudnnConvolutionFwdAlgo_t conv_alg;
     checkCUDNN(cudnnGetConvolutionForwardAlgorithm(cudnn,
                                                    in_desc,
@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
                                                    /*memoryLimitInBytes=*/0,
                                                    &conv_alg));
     
-    // get workspace size
+    // get forward convolution workspace size
     size_t workspace_bytes{0}
     checkCUDNN(cudnnGetConvolutionForwardWorkspaceSize(cudnn,
                                                        in_desc,
@@ -163,6 +163,8 @@ int main(int argc, char* argv[]) {
 
     const float alpha = 1.0f, beta = 0.0f;
 
+    // forward convolution layer ----------------------------------------------
+
     checkCUDNN(cudnnConvolutionForward(cudnn,
                                        &alpha,
                                        in_desc,
@@ -176,6 +178,26 @@ int main(int argc, char* argv[]) {
                                        &beta,
                                        out_desc,
                                        d_output));
+
+    // activation layer (RELU) -----------------------------------------------
+
+    cudnnActivationDescriptor_t act_desc;
+    checkCUDNN(cudnnCreateActivationDescriptor(&act_desc));
+    checkCUDNN(cudnnSetActivationDescriptor(act_desc,
+                                            CUDNN_ACTIVATION_SIGMOID,//CUDNN_ACTIVATION_RELU,
+                                            CUDNN_PROPOGATE_NAN,
+                                            /*relu_coef=*/0));
+
+    checkCUDNN(cudnnActivationForward(cudnn,
+                                      act_desc,
+                                      &alpha,
+                                      out_desc,
+                                      d_output,
+                                      &beta,
+                                      out_desc,
+                                      d_output));
+
+
 
     float* h_output = new float[image_bytes];
     cudaMemcpy(h_output, d_output, image_bytes, cudaMemcpyDeviceToHost);
@@ -192,6 +214,7 @@ int main(int argc, char* argv[]) {
     cudnnDestroyTensorDescriptor(out_desc);
     cudnnDestroyFilterDescriptor(kernel_desc);
     cudnnDestroyConvolutionDescriptor(conv_desc);
+    cudnnDestroyActivationDescriptor(act_desc);
 
     cudnnDestroy(cudnn);
 }

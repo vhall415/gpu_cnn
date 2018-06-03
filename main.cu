@@ -21,6 +21,7 @@ cv::Mat load_image(const char* image_path) {
     cv::Mat image = cv::imread(image_path, CV_LOAD_IMAGE_COLOR);
     image.convertTo(image, CV_32FC3);
     cv::normalize(image, image, 0, 1, cv::NORM_MINMAX);
+    std::cerr << "Input image: " << image.rows << " x " << image.cols << " x " << image.channels() << std::endl;
     return image;
 }
 
@@ -30,6 +31,7 @@ void save_image(const char* output_filename, float* buffer, int height, int widt
     cv::threshold(output_image, output_image, /*threshold=*/0, /*maxval=*/0, cv::THRESH_TOZERO);
     cv::normalize(output_image, output_image, 0.0, 255.0, cv::NORM_MINMAX);
     output_image.convertTo(output_image, CV_8UC3);
+    cv::imwrite(output_filename, output_image);
     std::cerr << "Wrote output to " << output_filename << std::endl;
 }
 
@@ -198,8 +200,8 @@ int main(int argc, char* argv[]) {
 
     float* h_output = new float[image_bytes];
     cudaMemcpy(h_output, d_output, image_bytes, cudaMemcpyDeviceToHost);
-
-    save_image("cudnn_out.png", h_output, height, width);
+   
+    save_image("./cudnn_out.png", h_output, height, width);
 
     delete[] h_output;
     cudaFree(d_kernel);

@@ -13,15 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/core/lib/core/threadpool.h"
+#include "../core/lib/core/threadpool.h"
 
 #include <atomic>
 
-#include "tensorflow/core/platform/context.h"
-#include "tensorflow/core/platform/env.h"
-#include "tensorflow/core/platform/mutex.h"
-#include "tensorflow/core/platform/test.h"
-#include "tensorflow/core/platform/test_benchmark.h"
+#include "../core/platform/context.h"
+#include "../core/platform/env.h"
+#include "../core/platform/mutex.h"
+#include "../core/platform/test.h"
+#include "../core/platform/test_benchmark.h"
 
 namespace tensorflow {
 namespace thread {

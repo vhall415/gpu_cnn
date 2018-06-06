@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef TENSORFLOW_CORE_LIB_CORE_BITMAP_H_
 #define TENSORFLOW_CORE_LIB_CORE_BITMAP_H_
 
-#include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/types.h"
+#include "../core/platform/logging.h"
+#include "../core/platform/types.h"
 
 namespace tensorflow {
 namespace core {

@@ -21,9 +21,9 @@ limitations under the License.
 #ifndef TENSORFLOW_LIB_CORE_CODING_H_
 #define TENSORFLOW_LIB_CORE_CODING_H_
 
-#include "tensorflow/core/lib/core/raw_coding.h"
-#include "tensorflow/core/lib/core/stringpiece.h"
-#include "tensorflow/core/platform/types.h"
+#include "../core/lib/core/raw_coding.h"
+#include "../core/lib/core/stringpiece.h"
+#include "../core/platform/types.h"
 
 namespace tensorflow {
 namespace core {

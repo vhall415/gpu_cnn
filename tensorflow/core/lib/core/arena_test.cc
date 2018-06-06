@@ -13,10 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/core/lib/core/arena.h"
+#include "../core/lib/core/arena.h"
 
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/platform/test.h"
+#include "../core/platform/macros.h"
+#include "../core/platform/test.h"
 
 namespace tensorflow {
 namespace core {

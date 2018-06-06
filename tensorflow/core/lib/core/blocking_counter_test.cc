@@ -13,10 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/core/lib/core/blocking_counter.h"
-#include "tensorflow/core/lib/core/threadpool.h"
-#include "tensorflow/core/platform/test.h"
-#include "tensorflow/core/platform/test_benchmark.h"
+#include "../core/lib/core/blocking_counter.h"
+#include "../core/lib/core/threadpool.h"
+#include "../core/platform/test.h"
+#include "../core/platform/test_benchmark.h"
 
 namespace tensorflow {
 namespace {

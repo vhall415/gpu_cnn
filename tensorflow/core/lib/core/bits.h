@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef TENSORFLOW_LIB_CORE_BITS_H_
 #define TENSORFLOW_LIB_CORE_BITS_H_
 
-#include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/types.h"
+#include "../core/platform/logging.h"
+#include "../core/platform/types.h"
 
 namespace tensorflow {
 

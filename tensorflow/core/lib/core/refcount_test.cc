@@ -13,9 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/core/lib/core/refcount.h"
+#include "../core/lib/core/refcount.h"
 
-#include "tensorflow/core/platform/test.h"
+#include "../core/platform/test.h"
 
 namespace tensorflow {
 namespace core {

@@ -17,7 +17,7 @@ limitations under the License.
 #define TENSORFLOW_LIB_CORE_REFCOUNT_H_
 
 #include <atomic>
-#include "tensorflow/core/platform/logging.h"
+#include "../core/platform/logging.h"
 
 namespace tensorflow {
 namespace core {

@@ -13,17 +13,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/core/lib/core/threadpool.h"
+#include "../core/lib/core/threadpool.h"
 
 #define EIGEN_USE_THREADS
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
-#include "tensorflow/core/platform/context.h"
-#include "tensorflow/core/platform/denormal.h"
-#include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/mutex.h"
-#include "tensorflow/core/platform/setround.h"
-#include "tensorflow/core/platform/tracing.h"
-#include "tensorflow/core/platform/types.h"
+#include "../core/platform/context.h"
+#include "../core/platform/denormal.h"
+#include "../core/platform/logging.h"
+#include "../core/platform/mutex.h"
+#include "../core/platform/setround.h"
+#include "../core/platform/tracing.h"
+#include "../core/platform/types.h"
 
 namespace tensorflow {
 namespace thread {

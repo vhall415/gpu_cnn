@@ -13,9 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/core/lib/core/coding.h"
+#include "../core/lib/core/coding.h"
 
-#include "tensorflow/core/platform/byte_order.h"
+#include "../core/platform/byte_order.h"
 
 namespace tensorflow {
 namespace core {

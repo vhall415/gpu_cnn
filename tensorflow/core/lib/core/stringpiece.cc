@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/core/lib/core/stringpiece.h"
+#include "../core/lib/core/stringpiece.h"
 
 #include <algorithm>
 #include <iostream>

@@ -18,8 +18,8 @@ limitations under the License.
 
 #include <atomic>
 
-#include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/mutex.h"
+#include "../core/platform/logging.h"
+#include "../core/platform/mutex.h"
 
 namespace tensorflow {
 

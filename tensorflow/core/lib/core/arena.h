@@ -22,9 +22,9 @@ limitations under the License.
 
 #include <vector>
 
-#include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/platform/types.h"
+#include "../core/platform/logging.h"
+#include "../core/platform/macros.h"
+#include "../core/platform/types.h"
 
 namespace tensorflow {
 namespace core {

@@ -21,17 +21,17 @@ limitations under the License.
 // suggested by Ron van der Wal and Scott Meyers at
 //     http://www.aristeia.com/BookErrata/M27Comments_frames.html
 
-#include "tensorflow/core/lib/core/arena.h"
+#include "../core/lib/core/arena.h"
 
 #include <assert.h>
 
 #include <algorithm>
 #include <vector>
 
-#include "tensorflow/core/lib/math/math_util.h"
-#include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/platform/mem.h"
+#include "../core/lib/math/math_util.h"
+#include "../core/platform/logging.h"
+#include "../core/platform/macros.h"
+#include "../core/platform/mem.h"
 
 namespace tensorflow {
 namespace core {

@@ -18,9 +18,9 @@ limitations under the License.
 
 #include <functional>
 #include <memory>
-#include "tensorflow/core/platform/env.h"
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/platform/types.h"
+#include "../core/platform/env.h"
+#include "../core/platform/macros.h"
+#include "../core/platform/types.h"
 
 namespace tensorflow {
 namespace thread {

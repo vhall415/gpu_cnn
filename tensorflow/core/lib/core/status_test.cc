@@ -13,11 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/core/lib/core/status.h"
-#include "tensorflow/core/lib/core/errors.h"
-#include "tensorflow/core/lib/core/status_test_util.h"
-#include "tensorflow/core/platform/test.h"
-#include "tensorflow/core/platform/test_benchmark.h"
+#include "../core/lib/core/status.h"
+#include "../core/lib/core/errors.h"
+#include "../core/lib/core/status_test_util.h"
+#include "../core/platform/test.h"
+#include "../core/platform/test_benchmark.h"
 
 namespace tensorflow {
 

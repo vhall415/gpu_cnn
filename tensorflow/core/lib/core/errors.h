@@ -18,10 +18,10 @@ limitations under the License.
 
 #include <sstream>
 
-#include "tensorflow/core/lib/core/status.h"
-#include "tensorflow/core/lib/strings/strcat.h"
-#include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/macros.h"
+#include "../core/lib/core/status.h"
+#include "../core/lib/strings/strcat.h"
+#include "../core/platform/logging.h"
+#include "../core/platform/macros.h"
 
 namespace tensorflow {
 namespace errors {

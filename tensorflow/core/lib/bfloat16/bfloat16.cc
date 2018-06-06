@@ -1,4 +1,4 @@
-/* Copyright 2015 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2017 The TensorFlow Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,11 +13,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_UTIL_NOTIFICATION_H_
-#define TENSORFLOW_UTIL_NOTIFICATION_H_
+#include "tensorflow/core/lib/bfloat16/bfloat16.h"
 
-// Notification implementation is platform-dependent, to support
-// alternative synchronization primitives.
-#include "../core/platform/notification.h"
+#include "third_party/eigen3/Eigen/Core"
 
-#endif  // TENSORFLOW_UTIL_NOTIFICATION_H_
+namespace tensorflow {
+
+B16_DEVICE_FUNC bfloat16::operator Eigen::half() const {
+  return static_cast<Eigen::half>(float(*this));
+}
+}  // end namespace tensorflow

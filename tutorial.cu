@@ -6,9 +6,6 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "tensorflow/tensorflow/c/checkpoint_reader.h"
-#include "tensorflow/tensorflow/c/checkpoint_reader.cc"
-
 // function to check for errors
 #define checkCUDNN(expression) \
 {                                \
@@ -165,7 +162,7 @@ int main(int argc, char* argv[]) {
 
     const float alpha = 1.0f, beta = 0.0f;
 
-    // convolution 1 layer ----------------------------------------------
+    // forward convolution layer ----------------------------------------------
 
     /*checkCUDNN(*/cudnnConvolutionForward(cudnn,
                                        &alpha,
@@ -181,12 +178,12 @@ int main(int argc, char* argv[]) {
                                        out_desc,
                                        d_output);
 
-    // activation 1 layer (RELU) -----------------------------------------------
+    // activation layer (RELU) -----------------------------------------------
 
     cudnnActivationDescriptor_t act_desc;
     /*checkCUDNN(*/cudnnCreateActivationDescriptor(&act_desc);
     /*checkCUDNN(*/cudnnSetActivationDescriptor(act_desc,
-                                            CUDNN_ACTIVATION_RELU,
+                                            CUDNN_ACTIVATION_SIGMOID,//CUDNN_ACTIVATION_RELU,
                                             CUDNN_PROPAGATE_NAN,
                                             /*relu_coef=*/0);
 
@@ -199,66 +196,7 @@ int main(int argc, char* argv[]) {
                                       out_desc,
                                       d_output);
 
-    // pooling 1 layer ---------------------------------------------------------
 
-    cudnnPoolingDescriptor_t pool_desc;
-    cudnnCreatePoolingDescriptor(&pool_desc);
-    cudnnSetPoolingDescriptor(pool_desc,
-    			      /*mode=*/CUDNN_POOLING_MAX,
-    			      /*maxpoolingNanOpt=*/CUDNN_PROPAGATE_NAN,
-    			      /*windowHeight=*/2,
-    			      /*windowWidth=*/2,
-    			      /*verticalPadding=*/1,
-    			      /*horizontalPadding=*/1,
-    			      /*verticalStride=*/2,
-    			      /*horizontalStride=*/2);
-
-    cudnnPoolingForward(cudnn,
-    			pool_desc,
-    			&alpha,
-    			out_desc,
-    			d_output,
-    			&beta,
-    			out_desc,
-    			d_output);
-
-    // convolution 2 layer ----------------------------------------------
-//CHECK IF NEED TO RE-SET KERNEL_DESC, CONV_DESC, CONV_ALG, WORKSPACE
-    /*checkCUDNN(*/cudnnConvolutionForward(cudnn,
-                                       &alpha,
-                                       out_desc,
-                                       d_output,
-                                       kernel_desc,
-                                       d_kernel2,
-                                       conv_desc,
-                                       conv_alg,
-                                       d_workspace,
-                                       workspace_bytes,
-                                       &beta,
-                                       out_desc,
-                                       d_output);
-
-    // activation 2 layer (RELU) -----------------------------------------------
-
-    /*checkCUDNN(*/cudnnActivationForward(cudnn,
-                                      act_desc,
-                                      &alpha,
-                                      out_desc,
-                                      d_output,
-                                      &beta,
-                                      out_desc,
-                                      d_output);
-
-    // pooling 2 layer ---------------------------------------------------------
-
-    cudnnPoolingForward(cudnn,
-    			pool_desc,
-    			&alpha,
-    			out_desc,
-    			d_output,
-    			&beta,
-    			out_desc,
-    			d_output);
 
     float* h_output = new float[image_bytes];
     cudaMemcpy(h_output, d_output, image_bytes, cudaMemcpyDeviceToHost);

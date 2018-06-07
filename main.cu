@@ -242,8 +242,8 @@ int main(int argc, char* argv[]) {
 				 /*maxpoolingNanOpt=*/CUDNN_PROPAGATE_NAN,
 				 /*windowHeight=*/2,
 				 /*windowWidth=*/2,
-				 /*verticalPadding=*/1,
-				 /*horizontalPadding=*/1,
+				 /*verticalPadding=*/0,
+				 /*horizontalPadding=*/0,
 				 /*verticalStride=*/2,
 				 /*horizontalStride=*/2);
 
@@ -348,8 +348,8 @@ int main(int argc, char* argv[]) {
 				 /*maxpoolingNanOpt=*/CUDNN_PROPAGATE_NAN,
 				 /*windowHeight=*/2,
 				 /*windowWidth=*/2,
-				 /*verticalPadding=*/1,
-				 /*horizontalPadding=*/1,
+				 /*verticalPadding=*/0,
+				 /*horizontalPadding=*/0,
 				 /*verticalStride=*/2,
 				 /*horizontalStride=*/2);
 

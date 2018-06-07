@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
+#include <cublas_v2.h>
 
 // function to check for errors
 #define checkCUDNN(expression) \
@@ -407,7 +408,7 @@ int main(int argc, char* argv[]) {
     cudnnCreateDropoutDescriptor(&drop_desc);
     cudnnSetDropoutDescriptor(drop_desc,
                               cudnn,
-                              dropout,
+                              /*dropout=*/0.1f,
                               /*states=*/NULL,
                               /*stateSizeInBytes=*/0,
                               /*seed=*/217);
@@ -416,8 +417,18 @@ int main(int argc, char* argv[]) {
     cudnnDropoutGetReserveSpaceSize(fc_out_desc,
                                     /*sizeInBytes=*/&drop_size);
 
+    cudnnTensorDescriptor_t drop_out_desc;
+    cudnnCreateTensorDescriptor(&drop_out_desc);
+    cudnnSetTensor4dDescriptor(drop_out_desc,
+                               CUDNN_TENSOR_NHWC,
+                               CUDNN_DATA_FLOAT,
+                               pool2_batch,
+                               1,
+                               1,
+                               1024);
 
-    // softmax layer descriptors -------------------------------------------------------------
+
+    // output layer descriptors --------------------------------------------------------------
 
     cudnnTensorDescriptor_t out_desc;
     cudnnCreateTensorDescriptor(&out_desc);
@@ -626,7 +637,7 @@ int main(int argc, char* argv[]) {
                         drop_out_desc,
                         d_drop_out,
                         d_reserve,
-                        drop_size);
+                        &drop_size);
 
     // output layer --------------------------------------------------------------------------
     // map 1024 features to 10 classes (one for each digit)
@@ -646,13 +657,14 @@ int main(int argc, char* argv[]) {
                                 /*C=*/d_out,
                                 /*ldc=*/1);
 
+    // add bias to d_out
+    
 
-    //float* h_output = new float[image_bytes];
-    //cudaMemcpy(h_output, d_output, image_bytes, cudaMemcpyDeviceToHost);
+
+    float* h_out = new float[out_size];
+    cudaMemcpy(h_out, d_out, out_size, cudaMemcpyDeviceToHost);
    
-    print
-
-    //delete[] h_output;
+    delete[] h_output;
     cudaFree(d_input);
     cudaFree(d_kernel_conv1);
     cudaFree(d_conv1_work);

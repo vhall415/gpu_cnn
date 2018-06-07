@@ -375,7 +375,7 @@ int main(int argc, char* argv[]) {
     
 
     // initialze device variables ---------------------------------------------
-    int in_size = BATCH * IN_CHANNELS * img.rows() * img.cols() * sizeof(float)
+    int in_size = BATCH * IN_CHANNELS * img.rows * img.cols * sizeof(float);
     float* d_input{nullptr};
     cudaMalloc(&d_input, in_size);
     cudaMemcpy(d_input, img.ptr<float>(0), in_size, cudaMemcpyHostToDevice);

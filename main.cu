@@ -18,7 +18,7 @@
 
 // use opencv to load/save an image from a path
 cv::Mat load_image(const char* image_path) {
-    cv::Mat image = cv::imread(image_path, CV_LOAD_IMAGE_COLOR);
+    cv::Mat image = cv::imread(image_path, CV_LOAD_IMAGE_UNCHANGED);
     image.convertTo(image, CV_32FC3);
     cv::normalize(image, image, 0, 1, cv::NORM_MINMAX);
     std::cerr << "Input image: " << image.rows << " x " << image.cols << " x " << image.channels() << std::endl;
@@ -36,7 +36,7 @@ void save_image(const char* output_filename, float* buffer, int height, int widt
 }
 
 int main(int argc, char* argv[]) {
-    cv::Mat img = load_image("./.png");
+    cv::Mat img = load_image("./bw_images/0.PNG");
 
     FILE *f;
     char buf[1000];
@@ -162,8 +162,8 @@ int main(int argc, char* argv[]) {
     cudnnConvolutionDescriptor_t conv_desc;
     /*checkCUDNN(*/cudnnCreateConvolutionDescriptor(&conv_desc);
     /*checkCUDNN(*/cudnnSetConvolution2dDescriptor(conv_desc,
-                                               /*pad_height=*/1,
-                                               /*pad_width=*/1,
+                                               /*pad_height=*/2,
+                                               /*pad_width=*/2,
                                                /*vertical_stride=*/1,
                                                /*horizontal_stride=*/1,
                                                /*dilation_height=*/1,
@@ -171,7 +171,7 @@ int main(int argc, char* argv[]) {
                                                /*mode=*/CUDNN_CROSS_CORRELATION,
                                                /*computeType=*/CUDNN_DATA_FLOAT);
 
-    // initialize variables for convolution
+    // initialize variables for convolution output dimensions
     int batch_size{0}, channels{0}, height{0}, width{0};
     /*checkCUDNN(*/cudnnGetConvolution2dForwardOutputDim(conv_desc,
                                                      in_desc,
@@ -273,7 +273,6 @@ int main(int argc, char* argv[]) {
     cudnnDestroyTensorDescriptor(out_desc);
     cudnnDestroyFilterDescriptor(kernel_desc);
     cudnnDestroyConvolutionDescriptor(conv_desc);
-    cudnnDestroyActivationDescriptor(act_desc);
 
     cudnnDestroy(cudnn);
 }

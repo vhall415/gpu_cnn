@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) {
     /*checkCUDNN(*/cudnnSetFilter4dDescriptor(kernel_desc,
                                           /*dataType=*/CUDNN_DATA_FLOAT,
                                           /*format=*/CUDNN_TENSOR_NCHW,
-                                          /*out_channels=*/32,
+                                          /*out_channels=*/1,
                                           /*in_channels=*/1,
                                           /*kernel_height=*/5,
                                           /*kernel_width=*/5);
@@ -190,7 +190,7 @@ int main(int argc, char* argv[]) {
                                           /*format=*/CUDNN_TENSOR_NHWC,
                                           /*dataType=*/CUDNN_DATA_FLOAT,
                                           /*batch_size=*/1,
-                                          /*channels=*/32,
+                                          /*channels=*/1,
                                           /*image_height=*/img.rows,
                                           /*image_width=*/img.cols);
 

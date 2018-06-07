@@ -413,7 +413,7 @@ int main(int argc, char* argv[]) {
                               /*stateSizeInBytes=*/0,
                               /*seed=*/217);
     
-    size_t *drop_size{nullptr};
+    size_t drop_size{0};
     cudnnDropoutGetReserveSpaceSize(fc_out_desc,
                                     /*sizeInBytes=*/&drop_size);
 
@@ -498,12 +498,10 @@ int main(int argc, char* argv[]) {
     cudaMalloc(&d_drop_out, fc_size);
     cudaMemset(d_drop_out, 0, fc_size);
 
-    int num_elem = pool2_chan * 1024 * 10;
+    int num_elems = pool2_chan * 1024 * 10;
     float* d_out_mat{nullptr};
-    cudaMalloc(&d_out_mat, num_elem);
-    cublas_status = cublasSetVector(num_elem, sizeof(float), out_mat, 1, d_out_mat, 1);
-
-
+    cudaMalloc(&d_out_mat, num_elems);
+    cublas_status = cublasSetVector(num_elems, sizeof(float), out_mat, 1, d_out_mat, 1);
 
     int out_size = 10 * sizeof(float);
     float* d_out{nullptr};
@@ -664,7 +662,7 @@ int main(int argc, char* argv[]) {
     float* h_out = new float[out_size];
     cudaMemcpy(h_out, d_out, out_size, cudaMemcpyDeviceToHost);
    
-    delete[] h_output;
+    delete[] h_out;
     cudaFree(d_input);
     cudaFree(d_kernel_conv1);
     cudaFree(d_conv1_work);

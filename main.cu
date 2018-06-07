@@ -697,6 +697,7 @@ int main(int argc, char* argv[]) {
     cudnnDestroyTensorDescriptor(pool2_out_desc);
     cudnnDestroyTensorDescriptor(fc_out_desc);
     cudnnDestroyDropoutDescriptor(drop_desc);
+    cudnnDestroyTensorDescriptor(drop_out_desc);
     cudnnDestroyTensorDescriptor(out_desc);
 
     cudnnDestroy(cudnn);

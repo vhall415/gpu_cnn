@@ -184,9 +184,9 @@ int main(int argc, char* argv[]) {
     std::cerr << "Output Image: " << height << " x " << width << " x " << channels << std::endl;
 
     // create output tensor descriptor
-    cudnnTensorDescriptor_t out_desc;
-    /*checkCUDNN(*/cudnnCreateTensorDescriptor(&out_desc);
-    /*checkCUDNN(*/cudnnSetTensor4dDescriptor(out_desc,
+    cudnnTensorDescriptor_t conv1_out_desc;
+    /*checkCUDNN(*/cudnnCreateTensorDescriptor(&conv1_out_desc);
+    /*checkCUDNN(*/cudnnSetTensor4dDescriptor(conv1_out_desc,
                                           /*format=*/CUDNN_TENSOR_NHWC,
                                           /*dataType=*/CUDNN_DATA_FLOAT,
                                           /*batch_size=*/1,
@@ -194,13 +194,23 @@ int main(int argc, char* argv[]) {
                                           /*image_height=*/img.rows,
                                           /*image_width=*/img.cols);
 
+    cudnnTensorDescriptor_t pool1_out_desc;
+    cudnnCreateTensorDescriptor(&pool1_out_desc);
+    cudnnSetTensor4dDescriptor(pool1_out_desc,
+			       /*format=*/CUDNN_TENSOR_NHWC,
+			       /*dataType=*/CUDNN_DATA_FLOAT,
+			       /*batch_size=*/1,
+			       /*channels=*/32,
+		   	       /*image_height=*/img.rows,
+			       /*image_width=*/img.cols);
+
     // get forward convolution algorithm
     cudnnConvolutionFwdAlgo_t conv_alg;
     /*checkCUDNN(*/cudnnGetConvolutionForwardAlgorithm(cudnn,
                                                    in_desc,
                                                    kernel_desc,
                                                    conv_desc,
-                                                   out_desc,
+                                                   conv1_out_desc,
                                                    CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
                                                    /*memoryLimitInBytes=*/0,
                                                    &conv_alg);
@@ -211,7 +221,7 @@ int main(int argc, char* argv[]) {
                                                        in_desc,
                                                        kernel_desc,
                                                        conv_desc,
-						       out_desc,
+						       conv1_out_desc,
                                                        conv_alg,
                                                        &workspace_bytes);
     std::cerr << "Workspace size: " << (workspace_bytes / 1048576.0) << "MB" << std::endl;
@@ -228,9 +238,9 @@ int main(int argc, char* argv[]) {
     cudaMalloc(&d_input, image_bytes);
     cudaMemcpy(d_input, img.ptr<float>(0), image_bytes, cudaMemcpyHostToDevice);
     
-    float* d_output{nullptr};
-    cudaMalloc(&d_output, image_bytes);
-    cudaMemset(d_output, 0, image_bytes);
+    float* d_conv1_out{nullptr};
+    cudaMalloc(&d_conv1_out, image_bytes);
+    cudaMemset(d_conv1_out, 0, image_bytes);
 
     float* d_kernel_conv1{nullptr};
     cudaMalloc(&d_kernel_conv1, sizeof(kernel_conv1));
@@ -243,6 +253,8 @@ int main(int argc, char* argv[]) {
     const float alpha = 1.0f, beta = 0.0f;
 
     // convolution 1 layer ----------------------------------------------
+    // map grayscale input to 32 feature maps
+    // 28x28x1 -> 28x28x32
 
     /*checkCUDNN(*/cudnnConvolutionForward(cudnn,
                                        &alpha,
@@ -255,8 +267,88 @@ int main(int argc, char* argv[]) {
                                        d_workspace,
                                        workspace_bytes,
                                        &beta,
-                                       out_desc,
-                                       d_output);
+                                       conv1_out_desc,
+                                       d_conv1_out);
+
+    // relu 1 layer (activation) -----------------------------------------
+
+    cudnnActivationDescriptor_t act_desc;
+    cudnnCreateActivationDescriptor(&act_desc);
+    cudnnSetActivationDescriptor(act_desc,
+				 CUDNN_ACTIVATION_RELU,
+				 CUDNN_PROPAGATE_NAN,
+				 /*relu_coef=*/0);
+
+    cudnnActivationForward(cudnn,
+			   act_desc,
+			   &alpha,
+			   conv1_out_desc,
+			   &d_conv1_out,
+			   &beta,
+			   conv1_out_desc,
+			   d_conv1_out);
+
+    // pooling 1 layer -------------------------------------------------
+    // downsample by 2x
+    // 28x28x32 -> 14x14x32
+
+    cudnnPoolingDescriptor_t pool_desc;
+    cudnnCreatePoolingDescriptor(&pool_desc);
+    cudnnSetActivationDescriptor(pool_desc,
+				 /*mode=*/CUDNN_POOLING_MAX,
+				 /*maxpoolingNanOpt=*/CUDNN_PROPAGATE_NAN,
+				 /*windowHeight=*/2,
+				 /*windowWidth=*/2,
+				 /*verticalPadding=*/1,
+				 /*horizontalPadding=*/1,
+				 /*verticalStride=*/2,
+				 /*horizontalStride=*/2);
+
+    
+
+    cudnnPoolingForward(cudnn,
+			pool_desc,
+			&alpha,
+			conv1_out_desc,
+			d_conv1_out,
+			&beta,
+			pool1_out_desc,
+			d_pool1_out);
+
+    // convolution 2 layer -------------------------------------------
+    // map 32 feature maps to 64
+    // 14x14x32 -> 10x10x64
+
+
+
+    // relu 2 layer ---------------------------------------------------
+
+
+
+    // pooling 2 layer -----------------------------------------------
+    // downsample by 2x
+    // 10x10x64 -> 5x5x64
+
+
+
+    // fully connected 1 layer ---------------------------------------
+    // map 7x7x64 -> 1024 features
+
+
+
+    // relu 3 layer -------------------------------------------------
+
+
+
+    // dropout layer -----------------------------------------------
+    // control complexity of model
+
+
+
+    // softmax layer -----------------------------------------------
+    // map 1024 features to 10 classes (one for each digit)
+
+
 
     float* h_output = new float[image_bytes];
     cudaMemcpy(h_output, d_output, image_bytes, cudaMemcpyDeviceToHost);

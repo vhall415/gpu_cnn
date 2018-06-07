@@ -35,6 +35,10 @@ void save_image(const char* output_filename, float* buffer, int height, int widt
     std::cerr << "Wrote output to " << output_filename << std::endl;
 }
 
+#define BATCH 1 // number of images
+#define IN_CHANNELS 1   // number of channels of input image
+#define FILTER_DIM 5    // side length of convolution filter size
+
 int main(int argc, char* argv[]) {
     cv::Mat img = load_image("./bw_images/0.PNG");
 
@@ -134,7 +138,7 @@ int main(int argc, char* argv[]) {
     cudnnHandle_t cudnn;
     cudnnCreate(&cudnn);
 
-    // start of first convolutional layer -------------------------------------
+    // conv 1 descriptors --------------------------------------------------------------------
 
     // create/set input tensor descriptor
     cudnnTensorDescriptor_t in_desc;
@@ -142,8 +146,8 @@ int main(int argc, char* argv[]) {
     /*checkCUDNN(*/cudnnSetTensor4dDescriptor(in_desc,
                                           /*format=*/CUDNN_TENSOR_NHWC,
                                           /*dataType=*/CUDNN_DATA_FLOAT,
-                                          /*batch_size=*/1,
-                                          /*channels=*/1,
+                                          /*batch_size=*/BATCH,
+                                          /*channels=*/IN_CHANNELS,
                                           /*image_height=*/img.rows,
                                           /*image_width=*/img.cols);
     
@@ -154,9 +158,9 @@ int main(int argc, char* argv[]) {
                                           /*dataType=*/CUDNN_DATA_FLOAT,
                                           /*format=*/CUDNN_TENSOR_NCHW,
                                           /*out_channels=*/32,
-                                          /*in_channels=*/1,
-                                          /*kernel_height=*/5,
-                                          /*kernel_width=*/5);
+                                          /*in_channels=*/IN_CHANNELS,
+                                          /*kernel_height=*/FILTER_DIM,
+                                          /*kernel_width=*/FILTER_DIM);
 
     // create convolution descriptor
     cudnnConvolutionDescriptor_t conv1_desc;
@@ -172,16 +176,16 @@ int main(int argc, char* argv[]) {
                                                /*computeType=*/CUDNN_DATA_FLOAT);
 
     // initialize variables for convolution 1 output dimensions
-    int batch_size{0}, channels{0}, height{0}, width{0};
+    int conv1_batch{0}, conv1_chan{0}, conv1_h{0}, conv1_w{0};
     /*checkCUDNN(*/cudnnGetConvolution2dForwardOutputDim(conv1_desc,
                                                      in_desc,
                                                      conv1_kernel_desc,
-                                                     &batch_size,
-                                                     &channels,
-                                                     &height,
-                                                     &width);
+                                                     &conv1_batch,
+                                                     &conv1_chan,
+                                                     &conv1_h,
+                                                     &conv1_w);
 
-    std::cerr << "Output Image: " << conv1_batch << " x " << conv1_h << " x " << width << " x " << channels << std::endl;
+    std::cerr << "Output Image: " << conv1_batch << " x " << conv1_h << " x " << conv1_w << " x " << conv1_chan << std::endl;
 
     // create output tensor descriptors
     cudnnTensorDescriptor_t conv1_out_desc;
@@ -189,11 +193,46 @@ int main(int argc, char* argv[]) {
     /*checkCUDNN(*/cudnnSetTensor4dDescriptor(conv1_out_desc,
                                           /*format=*/CUDNN_TENSOR_NHWC,
                                           /*dataType=*/CUDNN_DATA_FLOAT,
-                                          /*batch_size=*/batch_size,
-                                          /*channels=*/channels,
-                                          /*image_height=*/height,
-                                          /*image_width=*/width);
+                                          /*batch_size=*/conv1_batch,
+                                          /*channels=*/conv1_chan,
+                                          /*image_height=*/conv1_h,
+                                          /*image_width=*/conv1_w);
 
+    // get forward convolution algorithm
+    cudnnConvolutionFwdAlgo_t conv1_alg;
+    /*checkCUDNN(*/cudnnGetConvolutionForwardAlgorithm(cudnn,
+                                                   in_desc,
+                                                   conv1_kernel_desc,
+                                                   conv1_desc,
+                                                   conv1_out_desc,
+                                                   CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
+                                                   /*memoryLimitInBytes=*/0,
+                                                   &conv1_alg);
+    
+    // get forward convolution workspace size
+    size_t conv1_work{0};
+    /*checkCUDNN(*/cudnnGetConvolutionForwardWorkspaceSize(cudnn,
+                                                       in_desc,
+                                                       conv1_kernel_desc,
+                                                       conv1_desc,
+						                               conv1_out_desc,
+                                                       conv1_alg,
+                                                       &conv1_work);
+    std::cerr << "Workspace size: " << (conv1_work / 1048576.0) << "MB" << std::endl;
+    assert(conv1_work > 0);
+
+
+    // relu descriptor -----------------------------------------------------------------------
+    // same one used for all relu layers
+    cudnnActivationDescriptor_t act_desc;
+    cudnnCreateActivationDescriptor(&act_desc);
+    cudnnSetActivationDescriptor(act_desc,
+				 CUDNN_ACTIVATION_RELU,
+				 CUDNN_PROPAGATE_NAN,
+				 /*relu_coef=*/0);
+
+
+    // pool1 descriptors ---------------------------------------------------------------------
     // get variables for pooling 1 output dimensions
  
     cudnnPoolingDescriptor_t pool1_desc;
@@ -209,12 +248,12 @@ int main(int argc, char* argv[]) {
 				 /*horizontalStride=*/2);
 
     int pool1_batch{0}, pool1_chan{0}, pool1_h{0}, pool1_w{0};
-    cudnnGetPooling2dForwardOutputDim(pool_desc,
+    cudnnGetPooling2dForwardOutputDim(pool1_desc,
                                       conv1_out_desc,
-    				      /*outN=*/&pool1_batch,
-    			 	      /*outC=*/&pool1_chan,
-    				      /*outH=*/&pool1_h,
-    				      /*outW=*/&pool1_w)
+    				                  /*outN=*/&pool1_batch,
+    			 	                  /*outC=*/&pool1_chan,
+    				                  /*outH=*/&pool1_h,
+    				                  /*outW=*/&pool1_w)
 
     std::cerr << "Pooling Output Size: " << pool1_batch << " x " << pool1_h << " x " << pool1_w << " x " << pool1_chan << std::endl;
 
@@ -228,77 +267,162 @@ int main(int argc, char* argv[]) {
 		   	       /*image_height=*/pool1_h,
 			       /*image_width=*/pool1_w);
     
+    // conv2 descriptors ---------------------------------------------------------------------
+    
+    cudnnFilterDescriptor_t conv2_kernel_desc;
+    /*checkCUDNN(*/cudnnCreateFilterDescriptor(&conv2_kernel_desc);
+    /*checkCUDNN(*/cudnnSetFilter4dDescriptor(conv2_kernel_desc,
+                                          /*dataType=*/CUDNN_DATA_FLOAT,
+                                          /*format=*/CUDNN_TENSOR_NCHW,
+                                          /*out_channels=*/64,
+                                          /*in_channels=*/pool1_chan,
+                                          /*kernel_height=*/FILTER_DIM,
+                                          /*kernel_width=*/FILTER_DIM);
+
+    // create convolution descriptor
+    cudnnConvolutionDescriptor_t conv2_desc;
+    /*checkCUDNN(*/cudnnCreateConvolutionDescriptor(&conv2_desc);
+    /*checkCUDNN(*/cudnnSetConvolution2dDescriptor(conv2_desc,
+                                               /*pad_height=*/2,
+                                               /*pad_width=*/2,
+                                               /*vertical_stride=*/1,
+                                               /*horizontal_stride=*/1,
+                                               /*dilation_height=*/1,
+                                               /*dilation_width=*/1,
+                                               /*mode=*/CUDNN_CROSS_CORRELATION,
+                                               /*computeType=*/CUDNN_DATA_FLOAT);
+
+    // initialize variables for convolution 2 output dimensions
+    int conv2_batch{0}, conv2_chan{0}, conv2_h{0}, conv2_w{0};
+    /*checkCUDNN(*/cudnnGetConvolution2dForwardOutputDim(conv2_desc,
+                                                     pool1_out_desc,
+                                                     conv2_kernel_desc,
+                                                     &conv2_batch,
+                                                     &conv2_chan,
+                                                     &conv2_h,
+                                                     &conv2_w);
+
+    std::cerr << "Conv2 Output Image: " << conv2_batch << " x " << conv2_h << " x " << conv2_w << " x " << conv2_chan << std::endl;
+
+    // create output tensor descriptors
+    cudnnTensorDescriptor_t conv2_out_desc;
+    /*checkCUDNN(*/cudnnCreateTensorDescriptor(&conv2_out_desc);
+    /*checkCUDNN(*/cudnnSetTensor4dDescriptor(conv2_out_desc,
+                                          /*format=*/CUDNN_TENSOR_NHWC,
+                                          /*dataType=*/CUDNN_DATA_FLOAT,
+                                          /*batch_size=*/conv2_batch,
+                                          /*channels=*/conv2_chan,
+                                          /*image_height=*/conv2_h,
+                                          /*image_width=*/conv2_w);
+
+    // get forward convolution algorithm
+    cudnnConvolutionFwdAlgo_t conv2_alg;
+    /*checkCUDNN(*/cudnnGetConvolutionForwardAlgorithm(cudnn,
+                                                   pool1_out_desc,
+                                                   conv2_kernel_desc,
+                                                   conv2_desc,
+                                                   conv2_out_desc,
+                                                   CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
+                                                   /*memoryLimitInBytes=*/0,
+                                                   &conv2_alg);
+    
+    // get forward convolution workspace size
+    size_t conv2_work{0};
+    /*checkCUDNN(*/cudnnGetConvolutionForwardWorkspaceSize(cudnn,
+                                                       pool1_out_desc,
+                                                       conv2_kernel_desc,
+                                                       conv2_desc,
+						                               conv2_out_desc,
+                                                       conv2_alg,
+                                                       &conv2_work);
+    std::cerr << "Workspace size: " << (conv2_work / 1048576.0) << "MB" << std::endl;
+    assert(conv2_work > 0);
+
+
     cudnnTensorDescriptor_t conv2_out_desc;
     /*checkCUDNN(*/cudnnCreateTensorDescriptor(&conv2_out_desc);
     /*checkCUDNN(*/cudnnSetTensor4dDescriptor(conv2_out_desc,
                                           /*format=*/CUDNN_TENSOR_NHWC,
                                           /*dataType=*/CUDNN_DATA_FLOAT,
                                           /*batch_size=*/1,
-                                          /*channels=*/64,
-                                          /*image_height=*/img.rows/2,
-                                          /*image_width=*/img.cols/2);
+                                          /*channels=*/conv2_batch,
+                                          /*image_height=*/conv2_h,
+                                          /*image_width=*/conv2_w);
+
+    // pool2 descriptors ---------------------------------------------------------------------
+    
+    cudnnPoolingDescriptor_t pool2_desc;
+    cudnnCreatePoolingDescriptor(&pool2_desc);
+    cudnnSetActivationDescriptor(pool2_desc,
+				 /*mode=*/CUDNN_POOLING_MAX,
+				 /*maxpoolingNanOpt=*/CUDNN_PROPAGATE_NAN,
+				 /*windowHeight=*/2,
+				 /*windowWidth=*/2,
+				 /*verticalPadding=*/1,
+				 /*horizontalPadding=*/1,
+				 /*verticalStride=*/2,
+				 /*horizontalStride=*/2);
+
+    int pool2_batch{0}, pool2_chan{0}, pool2_h{0}, pool2_w{0};
+    cudnnGetPooling2dForwardOutputDim(pool2_desc,
+                                      conv2_out_desc,
+    				                  /*outN=*/&pool2_batch,
+    			 	                  /*outC=*/&pool2_chan,
+    				                  /*outH=*/&pool2_h,
+    				                  /*outW=*/&pool2_w)
+
+    std::cerr << "Pool2 Output Size: " << pool2_batch << " x " << pool2_h << " x " << pool2_w << " x " << pool2_chan << std::endl;
 
     cudnnTensorDescriptor_t pool2_out_desc;
     cudnnCreateTensorDescriptor(&pool2_out_desc);
     cudnnSetTensor4dDescriptor(pool2_out_desc,
 			       /*format=*/CUDNN_TENSOR_NHWC,
 			       /*dataType=*/CUDNN_DATA_FLOAT,
-			       /*batch_size=*/1,
-			       /*channels=*/64,
-		   	       /*image_height=*/img.rows/4,
-			       /*image_width=*/img.cols/4);
- 
-
-    // get forward convolution algorithm
-    cudnnConvolutionFwdAlgo_t conv_alg;
-    /*checkCUDNN(*/cudnnGetConvolutionForwardAlgorithm(cudnn,
-                                                   in_desc,
-                                                   kernel_desc,
-                                                   conv_desc,
-                                                   conv1_out_desc,
-                                                   CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
-                                                   /*memoryLimitInBytes=*/0,
-                                                   &conv_alg);
+			       /*batch_size=*/pool2_batch,
+			       /*channels=*/pool2_chan,
+		   	       /*image_height=*/pool2_h,
+			       /*image_width=*/pool2_w);
     
-    // get forward convolution workspace size
-    size_t workspace_bytes{0};
-    /*checkCUDNN(*/cudnnGetConvolutionForwardWorkspaceSize(cudnn,
-                                                       in_desc,
-                                                       kernel_desc,
-                                                       conv_desc,
-						       conv1_out_desc,
-                                                       conv_alg,
-                                                       &workspace_bytes);
-    std::cerr << "Workspace size: " << (workspace_bytes / 1048576.0) << "MB" << std::endl;
-    assert(workspace_bytes > 0);
 
     // initialze device variables ---------------------------------------------
-    void* d_workspace{nullptr};
-    cudaMalloc(&d_workspace, workspace_bytes);
-
-    int image_bytes = batch_size * channels * height * width * sizeof(float);
-    std::cout << "image_bytes: " << image_bytes << std::endl;
-
+    int in_size = BATCH * IN_CHANNELS * img.rows() * img.cols() * sizeof(float)
     float* d_input{nullptr};
-    cudaMalloc(&d_input, image_bytes);
-    cudaMemcpy(d_input, img.ptr<float>(0), image_bytes, cudaMemcpyHostToDevice);
+    cudaMalloc(&d_input, in_size);
+    cudaMemcpy(d_input, img.ptr<float>(0), in_size, cudaMemcpyHostToDevice);
     
-    float* d_conv1_out{nullptr};
-    cudaMalloc(&d_conv1_out, image_bytes);
-    cudaMemset(d_conv1_out, 0, image_bytes);
-
     float* d_kernel_conv1{nullptr};
     cudaMalloc(&d_kernel_conv1, sizeof(kernel_conv1));
     cudaMemcpy(d_kernel_conv1, kernel_conv1, sizeof(kernel_conv1), cudaMemcpyHostToDevice);
+    
+    void* d_conv1_work{nullptr};
+    cudaMalloc(&d_conv1_work, conv1_work);
+    
+    int conv1_size = conv1_batch * conv1_chan * conv1_h * conv1_w * sizeof(float);
+    float* d_conv1_out{nullptr};
+    cudaMalloc(&d_conv1_out, conv1_size);
+    cudaMemset(d_conv1_out, 0, conv1_size);
+
+    int pool1_size = pool1_batch * pool1_chan * pool1_h * pool1_w * sizeof(float);
+    float* d_pool1_out{nullptr};
+    cudaMalloc(&d_pool1_out, pool1_size);
+    cudaMemset(d_pool1_out, 0, pool1_size);
 
     float* d_kernel_conv2{nullptr};
     cudaMalloc(&d_kernel_conv2, sizeof(kernel_conv2));
     cudaMemcpy(d_kernel_conv2, kernel_conv2, sizeof(kernel_conv2), cudaMemcpyHostToDevice);
     
-    int pool1_size = pool1_batch * pool1_chan * pool1_h * pool1_w * sizeof(float);
-    float* d_pool1_out{nullptr};
-    cudaMalloc(&d_pool1_out, pool1_size);
-    cudaMemset(d_pool1_out, 0, pool1_size);
+    void* d_conv2_work{nullptr};
+    cudaMalloc(&d_conv2_work, conv2_work);
+    
+    int conv2_size = conv2_batch * conv2_chan * conv2_h * conv2_w * sizeof(float);
+    float* d_conv2_out{nullptr};
+    cudaMalloc(&d_conv2_out, conv2_size);
+    cudaMemset(d_conv2_out, 0, conv2_size);
+
+    int pool2_size = pool2_batch * pool2_chan * pool2_h * pool2_w * sizeof(float);
+    float* d_pool2_out{nullptr};
+    cudaMalloc(&d_pool2_out, pool2_size);
+    cudaMemset(d_pool2_out, 0, pool2_size);
 
 
     const float alpha = 1.0f, beta = 0.0f;
@@ -311,24 +435,17 @@ int main(int argc, char* argv[]) {
                                        &alpha,
                                        in_desc,
                                        d_input,
-                                       kernel_desc,
+                                       conv1_kernel_desc,
                                        d_kernel_conv1,
-                                       conv_desc,
-                                       conv_alg,
-                                       d_workspace,
-                                       workspace_bytes,
+                                       conv1_desc,
+                                       conv1_alg,
+                                       d_conv1_work,
+                                       conv1_work,
                                        &beta,
                                        conv1_out_desc,
                                        d_conv1_out);
 
     // relu 1 layer (activation) -----------------------------------------
-
-    cudnnActivationDescriptor_t act_desc;
-    cudnnCreateActivationDescriptor(&act_desc);
-    cudnnSetActivationDescriptor(act_desc,
-				 CUDNN_ACTIVATION_RELU,
-				 CUDNN_PROPAGATE_NAN,
-				 /*relu_coef=*/0);
 
     cudnnActivationForward(cudnn,
 			   act_desc,
@@ -343,9 +460,8 @@ int main(int argc, char* argv[]) {
     // downsample by 2x
     // 28x28x32 -> 14x14x32
     
-
     cudnnPoolingForward(cudnn,
-			pool_desc,
+			pool1_desc,
 			&alpha,
 			conv1_out_desc,
 			d_conv1_out,
@@ -358,17 +474,43 @@ int main(int argc, char* argv[]) {
     // 2x2 padding
     // 14x14x32 -> 14x14x64
 
-
+    cudnnConvolutionForward(cudnn,
+                            &alpha,
+                            pool1_out_desc,
+                            d_pool1_out,
+                            conv2_kernel_desc,
+                            d_kernel_conv2,
+                            conv2_desc,
+                            conv2_alg,
+                            d_conv2_work,
+                            conv2_work,
+                            &beta,
+                            conv2_out_desc,
+                            d_conv2_out);
 
     // relu 2 layer ---------------------------------------------------
 
-
+    cudnnActivationForward(cudnn,
+                           act_desc,
+                           &alpha,
+                           conv2_out_desc,
+                           &d_conv2_out,
+                           &beta,
+                           conv2_out_desc,
+                           d_conv2_out);
 
     // pooling 2 layer -----------------------------------------------
     // downsample by 2x
     // 14x14x64 -> 7x7x64
 
-
+    cudnnPoolingForward(cudnn,
+                        pool2_desc,
+                        &alpha,
+                        conv2_out_desc,
+                        d_conv2_out,
+                        &beta,
+                        pool2_out_desc,
+                        d_pool2_out);
 
     // fully connected 1 layer ---------------------------------------
     // map 7x7x64 -> 1024 features

@@ -237,7 +237,7 @@ int main(int argc, char* argv[]) {
  
     cudnnPoolingDescriptor_t pool1_desc;
     cudnnCreatePoolingDescriptor(&pool1_desc);
-    cudnnSetActivationDescriptor(pool1_desc,
+    cudnnSetPooling2dDescriptor(pool1_desc,
 				 /*mode=*/CUDNN_POOLING_MAX,
 				 /*maxpoolingNanOpt=*/CUDNN_PROPAGATE_NAN,
 				 /*windowHeight=*/2,
@@ -253,7 +253,7 @@ int main(int argc, char* argv[]) {
     				                  /*outN=*/&pool1_batch,
     			 	                  /*outC=*/&pool1_chan,
     				                  /*outH=*/&pool1_h,
-    				                  /*outW=*/&pool1_w)
+    				                  /*outW=*/&pool1_w);
 
     std::cerr << "Pooling Output Size: " << pool1_batch << " x " << pool1_h << " x " << pool1_w << " x " << pool1_chan << std::endl;
 
@@ -339,21 +339,11 @@ int main(int argc, char* argv[]) {
     assert(conv2_work > 0);
 
 
-    cudnnTensorDescriptor_t conv2_out_desc;
-    /*checkCUDNN(*/cudnnCreateTensorDescriptor(&conv2_out_desc);
-    /*checkCUDNN(*/cudnnSetTensor4dDescriptor(conv2_out_desc,
-                                          /*format=*/CUDNN_TENSOR_NHWC,
-                                          /*dataType=*/CUDNN_DATA_FLOAT,
-                                          /*batch_size=*/1,
-                                          /*channels=*/conv2_batch,
-                                          /*image_height=*/conv2_h,
-                                          /*image_width=*/conv2_w);
-
     // pool2 descriptors ---------------------------------------------------------------------
     
     cudnnPoolingDescriptor_t pool2_desc;
     cudnnCreatePoolingDescriptor(&pool2_desc);
-    cudnnSetActivationDescriptor(pool2_desc,
+    cudnnSetPooling2dDescriptor(pool2_desc,
 				 /*mode=*/CUDNN_POOLING_MAX,
 				 /*maxpoolingNanOpt=*/CUDNN_PROPAGATE_NAN,
 				 /*windowHeight=*/2,
@@ -369,7 +359,7 @@ int main(int argc, char* argv[]) {
     				                  /*outN=*/&pool2_batch,
     			 	                  /*outC=*/&pool2_chan,
     				                  /*outH=*/&pool2_h,
-    				                  /*outW=*/&pool2_w)
+    				                  /*outW=*/&pool2_w);
 
     std::cerr << "Pool2 Output Size: " << pool2_batch << " x " << pool2_h << " x " << pool2_w << " x " << pool2_chan << std::endl;
 
@@ -531,22 +521,33 @@ int main(int argc, char* argv[]) {
 
 
 
-    float* h_output = new float[image_bytes];
-    cudaMemcpy(h_output, d_output, image_bytes, cudaMemcpyDeviceToHost);
+    //float* h_output = new float[image_bytes];
+    //cudaMemcpy(h_output, d_output, image_bytes, cudaMemcpyDeviceToHost);
    
-    save_image("./conv1_out.png", h_output, height, width);
 
-    delete[] h_output;
-    cudaFree(d_kernel_conv1);
-    cudaFree(d_kernel_conv2);
+    //delete[] h_output;
     cudaFree(d_input);
-    cudaFree(d_output);
-    cudaFree(d_workspace);
+    cudaFree(d_kernel_conv1);
+    cudaFree(d_conv1_work);
+    cudaFree(d_conv1_out);
+    cudaFree(d_pool1_out);
+    cudaFree(d_kernel_conv2);
+    cudaFree(d_conv2_work);
+    cudaFree(d_conv2_out);
+    cudaFree(d_pool2_out);
 
     cudnnDestroyTensorDescriptor(in_desc);
-    cudnnDestroyTensorDescriptor(out_desc);
-    cudnnDestroyFilterDescriptor(kernel_desc);
-    cudnnDestroyConvolutionDescriptor(conv_desc);
+    cudnnDestroyFilterDescriptor(conv1_kernel_desc);
+    cudnnDestroyConvolutionDescriptor(conv1_desc);
+    cudnnDestroyTensorDescriptor(conv1_out_desc);
+    cudnnDestroyActivationDescriptor(act_desc);
+    cudnnDestroyPoolingDescriptor(pool1_desc);
+    cudnnDestroyTensorDescriptor(pool1_out_desc);
+    cudnnDestroyFilterDescriptor(conv2_kernel_desc);
+    cudnnDestroyConvolutionDescriptor(conv2_desc);
+    cudnnDestroyTensorDescriptor(conv2_out_desc);
+    cudnnDestroyPoolingDescriptor(pool2_desc);
+    cudnnDestroyTensorDescriptor(pool2_out_desc);
 
     cudnnDestroy(cudnn);
 }

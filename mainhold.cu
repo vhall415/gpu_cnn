@@ -36,8 +36,7 @@ void save_image(const char* output_filename, float* buffer, int height, int widt
 }
 
 int main(int argc, char* argv[]) {
-    cv::Mat img = load_image("./.png");
-
+    cv::Mat img = load_image("./tensor_flow.png");
     FILE *f;
     char buf[1000];
     // read weight files into arrays
@@ -257,10 +256,89 @@ int main(int argc, char* argv[]) {
                                        out_desc,
                                        d_output);
 
+    // activation 1 layer (RELU) -----------------------------------------------
+
+    cudnnActivationDescriptor_t act_desc;
+    /*checkCUDNN(*/cudnnCreateActivationDescriptor(&act_desc);
+    /*checkCUDNN(*/cudnnSetActivationDescriptor(act_desc,
+                                            CUDNN_ACTIVATION_RELU,
+                                            CUDNN_PROPAGATE_NAN,
+                                            /*relu_coef=*/0);
+
+    /*checkCUDNN(*/cudnnActivationForward(cudnn,
+                                      act_desc,
+                                      &alpha,
+                                      out_desc,
+                                      d_output,
+                                      &beta,
+                                      out_desc,
+                                      d_output);
+
+    // pooling 1 layer ---------------------------------------------------------
+
+    cudnnPoolingDescriptor_t pool_desc;
+    cudnnCreatePoolingDescriptor(&pool_desc);
+    cudnnSetPooling2dDescriptor(pool_desc,
+    			      /*mode=*/CUDNN_POOLING_MAX,
+    			      /*maxpoolingNanOpt=*/CUDNN_PROPAGATE_NAN,
+    			      /*windowHeight=*/2,
+    			      /*windowWidth=*/2,
+    			      /*verticalPadding=*/1,
+    			      /*horizontalPadding=*/1,
+    			      /*verticalStride=*/2,
+    			      /*horizontalStride=*/2);
+
+    cudnnPoolingForward(cudnn,
+    			pool_desc,
+    			&alpha,
+    			out_desc,
+    			d_output,
+    			&beta,
+    			out_desc,
+    			d_output);
+
+    // convolution 2 layer ----------------------------------------------
+//CHECK IF NEED TO RE-SET KERNEL_DESC, CONV_DESC, CONV_ALG, WORKSPACE
+    /*checkCUDNN(*/cudnnConvolutionForward(cudnn,
+                                       &alpha,
+                                       out_desc,
+                                       d_output,
+                                       kernel_desc,
+                                       d_kernel_conv2,
+                                       conv_desc,
+                                       conv_alg,
+                                       d_workspace,
+                                       workspace_bytes,
+                                       &beta,
+                                       out_desc,
+                                       d_output);
+
+    // activation 2 layer (RELU) -----------------------------------------------
+
+    /*checkCUDNN(*/cudnnActivationForward(cudnn,
+                                      act_desc,
+                                      &alpha,
+                                      out_desc,
+                                      d_output,
+                                      &beta,
+                                      out_desc,
+                                      d_output);
+
+    // pooling 2 layer ---------------------------------------------------------
+
+    cudnnPoolingForward(cudnn,
+    			pool_desc,
+    			&alpha,
+    			out_desc,
+    			d_output,
+    			&beta,
+    			out_desc,
+    			d_output);
+
     float* h_output = new float[image_bytes];
     cudaMemcpy(h_output, d_output, image_bytes, cudaMemcpyDeviceToHost);
    
-    save_image("./conv1_out.png", h_output, height, width);
+    save_image("./cudnn_out.png", h_output, height, width);
 
     delete[] h_output;
     cudaFree(d_kernel_conv1);

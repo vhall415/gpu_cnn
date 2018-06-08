@@ -160,8 +160,6 @@ int main(int argc, char* argv[]) {
     }
     fclose(f);
 
-std::cerr << "1" << std::endl;
-
     // create handle for cudnn
     cudnnHandle_t cudnn;
     checkCUDNN(cudnnCreate(&cudnn));
@@ -766,20 +764,7 @@ std::cerr << "1" << std::endl;
 
     float* h_out = new float[kernel1_size];
     cudaMemcpy(h_out, d_conv1_out, kernel1_size, cudaMemcpyDeviceToHost);
-   
-    int count = 0;
-    for(int k = 0; k < 32; k++) {
-	for(int ch = 0; ch < 1; ch++) {
-	    for(int r = 0; r < 5; r++) {
-		for(int c = 0; c < 5; c++) {
-    			std::cerr << "out: " << h_out[k] << std::endl; 
-			count++;
-		}
-	    }
-	}
-    }
 
-std::cerr << "count: " << count << std::endl;
     //delete[] h_full_out;
     delete[] h_out;
     delete[] fc_mat;

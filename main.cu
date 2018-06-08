@@ -763,14 +763,20 @@ std::cerr << "1" << std::endl;
 
     //std::cerr << h_full_out[0] << std::endl;
 
-std::cerr << "conv1size: " << conv1_size << std::endl;
     float* h_out = new float[conv1_size];
     cudaMemcpy(h_out, d_conv1_out, conv1_size, cudaMemcpyDeviceToHost);
    
-    std::cerr << "imgsize: " << sizeof(img) << std::endl;
-    std::cerr << "hsize: " << sizeof(conv1_size) << std::endl;
  
-    save_image("./out.png", h_out, conv1_h, conv1_w);
+    save_image("./out0.png", &h_out[0], conv1_h, conv1_w);
+    save_image("./out1.png", &h_out[1], conv1_h, conv1_w);
+    save_image("./out2.png", &h_out[2], conv1_h, conv1_w);
+    save_image("./out3.png", &h_out[3], conv1_h, conv1_w);
+    save_image("./out4.png", &h_out[4], conv1_h, conv1_w);
+    save_image("./out5.png", &h_out[5], conv1_h, conv1_w);
+    save_image("./out6.png", &h_out[6], conv1_h, conv1_w);
+    save_image("./out7.png", &h_out[7], conv1_h, conv1_w);
+    save_image("./out8.png", &h_out[8], conv1_h, conv1_w);
+    save_image("./out9.png", &h_out[9], conv1_h, conv1_w);
     //delete[] h_full_out;
     delete[] h_out;
     delete[] fc_mat;

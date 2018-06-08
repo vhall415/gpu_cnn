@@ -130,10 +130,10 @@ int main(int argc, char* argv[]) {
     // fully connected layer bias
     // 1024
     f = fopen("./weights/var5.txt", "r");
-    float bias_fully_con[1024];
+    float bias_fc[1024];
     for(int i = 0; i < 1024; i++) {
 	if(fgets(buf, 1000, f) != NULL)
-	    bias_fully_con[i] = atof(buf);
+	    bias_fc[i] = atof(buf);
     }
     fclose(f);
 
@@ -151,14 +151,16 @@ int main(int argc, char* argv[]) {
 
     // output layer bias
     // 10
-    float out_bias[10];
+    float bias_out[10];
     f = fopen("./weights/var7.txt", "r");
     for(int i = 0; i < 10; i++) {
         if(fgets(buf, 1000, f) != NULL) {
-	        out_bias[i] = atof(buf);
+	        bias_out[i] = atof(buf);
 	    }
     }
     fclose(f);
+
+std::cerr << "1" << std::endl;
 
     // create handle for cudnn
     cudnnHandle_t cudnn;
@@ -223,6 +225,17 @@ int main(int argc, char* argv[]) {
                                           /*channels=*/conv1_chan,
                                           /*image_height=*/conv1_h,
                                           /*image_width=*/conv1_w));
+
+    cudnnTensorDescriptor_t conv1_bias_desc;
+    checkCUDNN(cudnnCreateTensorDescriptor(&conv1_bias_desc));
+    checkCUDNN(cudnnSetTensor4dDescriptor(conv1_bias_desc,
+                                          /*format=*/CUDNN_TENSOR_NHWC,
+                                          /*dataType=*/CUDNN_DATA_FLOAT,
+                                          /*batch_size=*/conv1_batch,
+                                          /*channels=*/conv1_chan,
+                                          /*image_height=*/1,
+                                          /*image_width=*/1));
+
 
     // get forward convolution algorithm
     cudnnConvolutionFwdAlgo_t conv1_alg;
@@ -342,6 +355,15 @@ int main(int argc, char* argv[]) {
                                           /*image_height=*/conv2_h,
                                           /*image_width=*/conv2_w));
 
+    cudnnTensorDescriptor_t conv2_bias_desc;
+    checkCUDNN(cudnnCreateTensorDescriptor(&conv2_bias_desc));
+    checkCUDNN(cudnnSetTensor4dDescriptor(conv2_bias_desc,
+                                          /*format=*/CUDNN_TENSOR_NHWC,
+                                          /*dataType=*/CUDNN_DATA_FLOAT,
+                                          /*batch_size=*/conv2_batch,
+                                          /*channels=*/conv2_chan,
+                                          /*image_height=*/1,
+                                          /*image_width=*/1));
     // get forward convolution algorithm
     cudnnConvolutionFwdAlgo_t conv2_alg;
     checkCUDNN(cudnnGetConvolutionForwardAlgorithm(cudnn,
@@ -419,6 +441,15 @@ int main(int argc, char* argv[]) {
                                1,
                                1024));
 
+    cudnnTensorDescriptor_t fc_bias_desc;
+    checkCUDNN(cudnnCreateTensorDescriptor(&fc_bias_desc));
+    checkCUDNN(cudnnSetTensor4dDescriptor(fc_bias_desc,
+                                          /*format=*/CUDNN_TENSOR_NHWC,
+                                          /*dataType=*/CUDNN_DATA_FLOAT,
+                                          /*batch_size=*/pool2_batch,
+                                          /*channels=*/1,
+                                          /*image_height=*/1,
+                                          /*image_width=*/1024));
 
     // dropout layer descriptors -------------------------------------------------------------
 
@@ -463,6 +494,15 @@ int main(int argc, char* argv[]) {
                                1,
                                10));
 
+    cudnnTensorDescriptor_t out_bias_desc;
+    checkCUDNN(cudnnCreateTensorDescriptor(&out_bias_desc));
+    checkCUDNN(cudnnSetTensor4dDescriptor(out_bias_desc,
+                                          /*format=*/CUDNN_TENSOR_NHWC,
+                                          /*dataType=*/CUDNN_DATA_FLOAT,
+                                          /*batch_size=*/pool2_batch,
+                                          /*channels=*/1,
+                                          /*image_height=*/1,
+                                          /*image_width=*/10));
     // initialze device variables ---------------------------------------------
     int in_size = BATCH * IN_CHANNELS * img.rows * img.cols * sizeof(float);
     float* d_input{nullptr};
@@ -480,7 +520,11 @@ int main(int argc, char* argv[]) {
     float* d_conv1_out{nullptr};
     cudaMalloc(&d_conv1_out, conv1_size);
     cudaMemset(d_conv1_out, 0, conv1_size);
-
+    
+    float* d_bias_conv1{nullptr};
+    cudaMalloc(&d_bias_conv1, sizeof(bias_conv1));
+    cudaMemcpy(d_bias_conv1, bias_conv1, sizeof(bias_conv1), cudaMemcpyHostToDevice);
+    
     int pool1_size = pool1_batch * pool1_chan * pool1_h * pool1_w * sizeof(float);
     float* d_pool1_out{nullptr};
     cudaMalloc(&d_pool1_out, pool1_size);
@@ -498,6 +542,10 @@ int main(int argc, char* argv[]) {
     cudaMalloc(&d_conv2_out, conv2_size);
     cudaMemset(d_conv2_out, 0, conv2_size);
 
+    float* d_bias_conv2{nullptr};
+    cudaMalloc(&d_bias_conv2, sizeof(bias_conv2));
+    cudaMemcpy(d_bias_conv2, bias_conv2, sizeof(bias_conv2), cudaMemcpyHostToDevice);
+    
     int pool2_size = pool2_batch * pool2_chan * pool2_h * pool2_w * sizeof(float);
     float* d_pool2_out{nullptr};
     cudaMalloc(&d_pool2_out, pool2_size);
@@ -508,10 +556,14 @@ int main(int argc, char* argv[]) {
     cudaMalloc(&d_fully_con_mat, fc_size);
     cublas_status = cublasSetMatrix(3136, 1024, fc_size, fully_con, 3136, d_fully_con_mat, 3136);
 
+    float* d_bias_fc{nullptr};
+    cudaMalloc(&d_bias_fc, sizeof(bias_fc));
+    cudaMemcpy(d_bias_fc, bias_fc, sizeof(bias_fc), cudaMemcpyHostToDevice);
+    
     int fc_out_size = 1024 * sizeof(float);
     float* d_fully_con_out{nullptr};
     cudaMalloc(&d_fully_con_out, fc_out_size);
-    cudaMemset(d_fully_con_out, 0, fc_size);
+    cudaMemset(d_fully_con_out, 0, fc_out_size);
 
     void* d_reserve{nullptr};
     cudaMalloc(&d_reserve, drop_size);
@@ -525,6 +577,10 @@ int main(int argc, char* argv[]) {
     cudaMalloc(&d_out_mat, num_elems);
     cublas_status = cublasSetMatrix(1024, 10, num_elems*sizeof(float), out_mat, 1024, d_out_mat, 1024);
 
+    float* d_bias_out{nullptr};
+    cudaMalloc(&d_bias_out, sizeof(bias_out));
+    cudaMemcpy(d_bias_out, bias_out, sizeof(bias_out), cudaMemcpyHostToDevice);
+    
     int out_size = 10 * sizeof(float);
     float* d_out{nullptr};
     cudaMalloc(&d_out, out_size);
@@ -549,6 +605,14 @@ int main(int argc, char* argv[]) {
                                        &beta,
                                        conv1_out_desc,
                                        d_conv1_out));
+
+    checkCUDNN(cudnnAddTensor(cudnn,
+			      &alpha,
+			      conv1_bias_desc,
+   			      d_bias_conv1,
+			      &alpha,
+			      conv1_out_desc,
+			      d_conv1_out));
 
     // relu 1 layer (activation) -----------------------------------------
 
@@ -593,6 +657,14 @@ int main(int argc, char* argv[]) {
                             conv2_out_desc,
                             d_conv2_out));
 
+    checkCUDNN(cudnnAddTensor(cudnn,
+			      &alpha,
+			      conv2_bias_desc,
+   			      d_bias_conv2,
+			      &alpha,
+			      conv2_out_desc,
+			      d_conv2_out));
+
     // relu 2 layer ---------------------------------------------------
 
     checkCUDNN(cudnnActivationForward(cudnn,
@@ -635,6 +707,15 @@ int main(int argc, char* argv[]) {
                                 /*C=*/d_fully_con_out,
                                 /*ldc=*/1);
 
+    checkCUDNN(cudnnAddTensor(cudnn,
+			      &alpha,
+			      fc_bias_desc,
+   			      d_bias_fc,
+			      &alpha,
+			      fc_out_desc,
+			      d_fully_con_out));
+
+
     // relu 3 layer -------------------------------------------------
 
 
@@ -669,15 +750,25 @@ int main(int argc, char* argv[]) {
                                 /*C=*/d_out,
                                 /*ldc=*/1);
     // add bias to d_out
-    
+    checkCUDNN(cudnnAddTensor(cudnn,
+			      &alpha,
+			      out_bias_desc,
+   			      d_bias_out,
+			      &alpha,
+			      out_desc,
+			      d_out));
 
 
-    float* h_out = new float[out_size];
-    cudaMemcpy(h_out, d_out, out_size, cudaMemcpyDeviceToHost);
+    //float* h_full_out = new float[fc_out_size];
+    //cudaMemcpy(h_full_out, d_fully_con_out, fc_out_size, cudaMemcpyDeviceToHost);
+
+    //std::cerr << h_full_out[0] << std::endl;
+
+    float* h_out = new float[pool1_size];
+    cudaMemcpy(h_out, d_pool1_out, pool1_size, cudaMemcpyDeviceToHost);
     
-    for(int i = 0; i < 10; i++)
-        std::cout << h_out[i] << std::endl;
-    
+    save_image("./out.png", h_out, pool1_h, pool1_w);
+    //delete[] h_full_out;
     delete[] h_out;
     delete[] fc_mat;
 
@@ -696,6 +787,10 @@ int main(int argc, char* argv[]) {
     cudaFree(d_drop_out);
     cudaFree(d_out_mat);
     cudaFree(d_out);
+    cudaFree(d_bias_conv1);
+    cudaFree(d_bias_conv2);
+    cudaFree(d_bias_fc);
+    cudaFree(d_bias_out);
 
     cublasDestroy(cublas_handle);
 
@@ -715,6 +810,10 @@ int main(int argc, char* argv[]) {
     cudnnDestroyDropoutDescriptor(drop_desc);
     cudnnDestroyTensorDescriptor(drop_out_desc);
     cudnnDestroyTensorDescriptor(out_desc);
+    cudnnDestroyTensorDescriptor(conv1_bias_desc);
+    cudnnDestroyTensorDescriptor(conv2_bias_desc);
+    cudnnDestroyTensorDescriptor(fc_bias_desc);
+    cudnnDestroyTensorDescriptor(out_bias_desc);
 
     
     cudnnDestroy(cudnn);

@@ -102,31 +102,20 @@ int main(int argc, char* argv[]) {
     
     // fully connected layer weights
     // 3136x1024
-    char* b;
-    f = fopen("./weights/var4.txt", "r");
-    float fully_con[1568][1024];
-    for(int row = 0; row < 1568; row++) {
-	for(int col = 0; col < 1024; col++) {
-	    if(fgets(buf, 1000, f) != NULL)
-	    	fully_con[row][col] = atof(buf);
-	    //std::cout << atof(buf) << std::endl;
-	}
+    f = fopen("./weights/var4_0.txt", "r");
+    float *fully_con = new float[3136*1024];
+    for(int i = 0; i < 1568*1024; i++) {
+	if(fgets(buf,1000,f) != NULL)
+	    fully_con[i] = atof(buf);
     }
-fgets(buf, 1000, f);
-if (feof(f)) {
-    fprintf(stdout, "Reached EOF.\n");
-}
-else if (ferror(f)) {
-    fprintf(stdout, "Error while reading the file.\n");
-}
     fclose(f);
 
-
-    for(int i = 0; i < 1568; i++) {
-	for(int j = 0; j < 1024; j++) {
-    	    std::cout << "array " << fully_con[i][j] << std::endl;
-	}
+    f = fopen("./weights/var4_1.txt", "r");
+     for(int i = 1568*1024; i < 3136*1024; i++) {
+	if(fgets(buf,1000,f) != NULL)
+	    fully_con[i] = atof(buf);
     }
+    fclose(f);
 
     // fully connected layer bias
     // 1024
@@ -578,6 +567,8 @@ else if (ferror(f)) {
     //cudaMemcpy(h_out, d_out, out_size, cudaMemcpyDeviceToHost);
    
     //delete[] h_out;
+    delete[] fully_con;
+
     cudaFree(d_input);
     cudaFree(d_kernel_conv1);
     cudaFree(d_conv1_work);

@@ -606,13 +606,13 @@ std::cerr << "1" << std::endl;
                                        conv1_out_desc,
                                        d_conv1_out));
 
-    checkCUDNN(cudnnAddTensor(cudnn,
-			      &alpha,
-			      conv1_bias_desc,
-   			      d_bias_conv1,
-			      &alpha,
-			      conv1_out_desc,
-			      d_conv1_out));
+//    checkCUDNN(cudnnAddTensor(cudnn,
+//			      &alpha,
+//			      conv1_bias_desc,
+  // 			      d_bias_conv1,
+//			      &alpha,
+//			      conv1_out_desc,
+//			      d_conv1_out));
 
     // relu 1 layer (activation) -----------------------------------------
 
@@ -764,9 +764,13 @@ std::cerr << "1" << std::endl;
 
     //std::cerr << h_full_out[0] << std::endl;
 
+std::cerr << "conv1size: " << conv1_size << std::endl;
     float* h_out = new float[conv1_size];
     cudaMemcpy(h_out, d_conv1_out, conv1_size, cudaMemcpyDeviceToHost);
-    
+   
+    std::cerr << "imgsize: " << sizeof(img) << std::endl;
+    std::cerr << "hsize: " << sizeof(conv1_size) << std::endl;
+ 
     save_image("./out.png", h_out, conv1_h, conv1_w);
     //delete[] h_full_out;
     delete[] h_out;

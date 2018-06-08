@@ -508,7 +508,7 @@ std::cerr << "1" << std::endl;
     cudaMalloc(&d_input, in_size);
     cudaMemcpy(d_input, img.ptr<float>(0), in_size, cudaMemcpyHostToDevice);
     
-    int kernel1_size = 32*28*28*sizeof(float);
+    int kernel1_size = 32*5*5*sizeof(float);
     float* d_kernel_conv1{nullptr};
     cudaMalloc(&d_kernel_conv1, kernel1_size);
     cudaMemcpy(d_kernel_conv1, kernel_conv1, kernel1_size, cudaMemcpyHostToDevice);
@@ -764,20 +764,22 @@ std::cerr << "1" << std::endl;
 
     //std::cerr << h_full_out[0] << std::endl;
 
-    float* h_out = new float[conv1_size];
-    cudaMemcpy(h_out, d_conv1_out, conv1_size, cudaMemcpyDeviceToHost);
+    float* h_out = new float[kernel1_size];
+    cudaMemcpy(h_out, d_conv1_out, kernel1_size, cudaMemcpyDeviceToHost);
    
- 
-    save_image("./out0.png", &h_out[0], conv1_h, conv1_w);
-    save_image("./out1.png", &h_out[1], conv1_h, conv1_w);
-    save_image("./out2.png", &h_out[2], conv1_h, conv1_w);
-    save_image("./out3.png", &h_out[3], conv1_h, conv1_w);
-    save_image("./out4.png", &h_out[4], conv1_h, conv1_w);
-    save_image("./out5.png", &h_out[5], conv1_h, conv1_w);
-    save_image("./out6.png", &h_out[6], conv1_h, conv1_w);
-    save_image("./out7.png", &h_out[7], conv1_h, conv1_w);
-    save_image("./out8.png", &h_out[8], conv1_h, conv1_w);
-    save_image("./out9.png", &h_out[9], conv1_h, conv1_w);
+    int count = 0;
+    for(int k = 0; k < 32; k++) {
+	for(int ch = 0; ch < 1; ch++) {
+	    for(int r = 0; r < 5; r++) {
+		for(int c = 0; c < 5; c++) {
+    			std::cerr << "out: " << h_out[k] << std::endl; 
+			count++;
+		}
+	    }
+	}
+    }
+
+std::cerr << "count: " << count << std::endl;
     //delete[] h_full_out;
     delete[] h_out;
     delete[] fc_mat;

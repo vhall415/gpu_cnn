@@ -426,10 +426,9 @@ std::cerr << "1" << std::endl;
 
     // fully connected layer descriptors -----------------------------------------------------
     
-    cublasStatus_t cublas_status;
     cublasHandle_t cublas_handle;
     
-    cublas_status = cublasCreate(&cublas_handle);
+    cublasCreate(&cublas_handle);
 
     cudnnTensorDescriptor_t fc_out_desc;
     checkCUDNN(cudnnCreateTensorDescriptor(&fc_out_desc));
@@ -554,7 +553,7 @@ std::cerr << "1" << std::endl;
     int fc_size = 3136*1024*sizeof(float);
     float* d_fully_con_mat{nullptr};
     cudaMalloc(&d_fully_con_mat, fc_size);
-    cublas_status = cublasSetMatrix(3136, 1024, fc_size, fully_con, 3136, d_fully_con_mat, 3136);
+    cublasSetMatrix(3136, 1024, fc_size, fully_con, 3136, d_fully_con_mat, 3136);
 
     float* d_bias_fc{nullptr};
     cudaMalloc(&d_bias_fc, sizeof(bias_fc));
@@ -575,7 +574,7 @@ std::cerr << "1" << std::endl;
     int num_elems = pool2_chan * 1024 * 10;
     float* d_out_mat{nullptr};
     cudaMalloc(&d_out_mat, num_elems);
-    cublas_status = cublasSetMatrix(1024, 10, num_elems*sizeof(float), out_mat, 1024, d_out_mat, 1024);
+    cublasSetMatrix(1024, 10, num_elems*sizeof(float), out_mat, 1024, d_out_mat, 1024);
 
     float* d_bias_out{nullptr};
     cudaMalloc(&d_bias_out, sizeof(bias_out));
@@ -616,14 +615,14 @@ std::cerr << "1" << std::endl;
 
     // relu 1 layer (activation) -----------------------------------------
 
-    checkCUDNN(cudnnActivationForward(cudnn,
-			   act_desc,
-			   &alpha,
-			   conv1_out_desc,
-			   d_conv1_out,
-			   &beta,
-			   conv1_out_desc,
-			   d_conv1_out));
+//    checkCUDNN(cudnnActivationForward(cudnn,
+//			   act_desc,
+//			   &alpha,
+//			   conv1_out_desc,
+//			   d_conv1_out,
+//			   &beta,
+//			   conv1_out_desc,
+//			   d_conv1_out));
 
     // pooling 1 layer -------------------------------------------------
     // downsample by 2x
@@ -692,7 +691,7 @@ std::cerr << "1" << std::endl;
     // fully connected 1 layer ---------------------------------------
     // map 7x7x64 -> 1024 features
 
-    cublas_status = cublasSgemm(cublas_handle,
+    cublasSgemm(cublas_handle,
                                 /*transa=*/CUBLAS_OP_N,
                                 /*transb=*/CUBLAS_OP_N,
                                 /*m=*/1,
@@ -735,7 +734,7 @@ std::cerr << "1" << std::endl;
     // output layer --------------------------------------------------------------------------
     // map 1024 features to 10 classes (one for each digit)
 
-    cublas_status = cublasSgemm(cublas_handle,
+    cublasSgemm(cublas_handle,
                                 /*transa=*/CUBLAS_OP_N,
                                 /*transb=*/CUBLAS_OP_N,
                                 /*m=*/1,

@@ -105,24 +105,24 @@ int main(int argc, char* argv[]) {
     f = fopen("./weights/var4_0.txt", "r");
     float *fully_con = new float[3136*1024];
     for(int i = 0; i < 1568*1024; i++) {
-	if(fgets(buf,1000,f) != NULL)
-	    fully_con[i] = atof(buf);
+	    if(fgets(buf,1000,f) != NULL)
+	        fully_con[i] = atof(buf);
     }
     fclose(f);
 
     f = fopen("./weights/var4_1.txt", "r");
     for(int i = 1568*1024; i < 3136*1024; i++) {
-	if(fgets(buf,1000,f) != NULL)
-	    fully_con[i] = atof(buf);
+	    if(fgets(buf,1000,f) != NULL)
+	        fully_con[i] = atof(buf);
     }
     fclose(f);
 
     float (*fc_mat)[1024] = new float[3136][1024];
 
     for(int row = 0; row < 3136; row++) {
-	for(int col = 0; col < 1024; col++) {
-	    fc_mat[row][col] = fully_con[1024*row+col];
-	}
+	    for(int col = 0; col < 1024; col++) {
+	        fc_mat[row][col] = fully_con[1024*row+col];
+	    }
     }
 
     delete[] fully_con;
@@ -155,8 +155,8 @@ int main(int argc, char* argv[]) {
     f = fopen("./weights/var7.txt", "r");
     for(int i = 0; i < 10; i++) {
         if(fgets(buf, 1000, f) != NULL) {
-	    out_bias[i] = atof(buf);
-	}
+	        out_bias[i] = atof(buf);
+	    }
     }
     fclose(f);
 
@@ -464,13 +464,17 @@ int main(int argc, char* argv[]) {
     cudaMalloc(&d_pool2_out, pool2_size);
     cudaMemset(d_pool2_out, 0, pool2_size);
 
-
     int fc_size = 3136*1024*sizeof(float);
     float* d_fully_con_mat{nullptr};
     cudaMalloc(&d_fully_con_mat, fc_size);
-    //cublas_status = cublasSetMatrix(3136, 1024, fc_size, fully_con, 3136, d_fully_con_mat, 3136);
+    cublas_status = cublasSetMatrix(3136, 1024, fc_size, fully_con, 3136, d_fully_con_mat, 3136);
 
-       const float alpha = 1.0f, beta = 0.0f;
+    int fc_out_size = 1024 * sizeof(float);
+    float* d_fully_con_out{nullptr};
+    cudaMalloc(&d_fully_con_out, fc_out_size);
+    cudaMemset(d_fully_con_out, 0, fc_size);
+
+    const float alpha = 1.0f, beta = 0.0f;
 
     // convolution 1 layer ----------------------------------------------
     // map grayscale input to 32 feature maps
@@ -560,7 +564,22 @@ int main(int argc, char* argv[]) {
     // fully connected 1 layer ---------------------------------------
     // map 7x7x64 -> 1024 features
 
-    // cublas matrix multiplication
+    cublas_status = cublasSgemm(cublas_handle,
+                                /*transa=*/CUBLAS_OP_N,
+                                /*transb=*/CUBLAS_OP_N,
+                                /*m=*/1,
+                                /*n=*/7*7*64,
+                                /*k=*/1024,
+                                /*alpha=*/&alpha,
+                                /*A=*/d_fully_con_mat,
+                                /*lda=*/1,
+                                /*B=*/d_pool2_out,
+                                /*ldb=*/7*7*64,
+                                /*beta=*/&beta,
+                                /*C=*/d_fully_con_out,
+                                /*ldc=*/1);
+
+
     // relu 3 layer -------------------------------------------------
 
     // dropout layer -----------------------------------------------
@@ -588,6 +607,12 @@ int main(int argc, char* argv[]) {
     cudaFree(d_conv2_work);
     cudaFree(d_conv2_out);
     cudaFree(d_pool2_out);
+    cudaFree(d_fully_con_mat);
+    cudaFree(d_fully_con_out);
+    //cudaFree(d_reserve);
+    //cudaFree(d_drop_out);
+    //cudaFree(d_out_mat);
+    //cudaFree(d_out);
 
     cublasDestroy(cublas_handle);
 
@@ -604,6 +629,10 @@ int main(int argc, char* argv[]) {
     cudnnDestroyPoolingDescriptor(pool2_desc);
     cudnnDestroyTensorDescriptor(pool2_out_desc);
     cudnnDestroyTensorDescriptor(fc_out_desc);
+    //cudnnDestroyDropoutDescriptor(drop_desc);
+    //cudnnDestroyTensorDescriptor(drop_out_desc);
+    //cudnnDestroyTensorDescriptor(out_desc);
+
     
     cudnnDestroy(cudnn);
 }

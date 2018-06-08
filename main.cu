@@ -42,7 +42,7 @@ void save_image(const char* output_filename, float* buffer, int height, int widt
 #define FILTER_DIM 5    // side length of convolution filter size
 
 int main(int argc, char* argv[]) {
-    cv::Mat img = load_image("./bw_images/0.PNG");
+    cv::Mat img = load_image("./gray_images/0.PNG");
 
     FILE *f;
     char buf[1000];

@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
 	}
     }
     fclose(f);
-	
+    
     // conv1 bias
     // 32
     float bias_conv1[32];
@@ -508,9 +508,10 @@ std::cerr << "1" << std::endl;
     cudaMalloc(&d_input, in_size);
     cudaMemcpy(d_input, img.ptr<float>(0), in_size, cudaMemcpyHostToDevice);
     
+    int kernel1_size = 32*28*28*sizeof(float);
     float* d_kernel_conv1{nullptr};
-    cudaMalloc(&d_kernel_conv1, sizeof(kernel_conv1));
-    cudaMemcpy(d_kernel_conv1, kernel_conv1, sizeof(kernel_conv1), cudaMemcpyHostToDevice);
+    cudaMalloc(&d_kernel_conv1, kernel1_size);
+    cudaMemcpy(d_kernel_conv1, kernel_conv1, kernel1_size, cudaMemcpyHostToDevice);
     
     void* d_conv1_work{nullptr};
     cudaMalloc(&d_conv1_work, conv1_work);

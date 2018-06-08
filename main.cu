@@ -764,10 +764,10 @@ std::cerr << "1" << std::endl;
 
     //std::cerr << h_full_out[0] << std::endl;
 
-    float* h_out = new float[pool1_size];
-    cudaMemcpy(h_out, d_pool1_out, pool1_size, cudaMemcpyDeviceToHost);
+    float* h_out = new float[conv1_size];
+    cudaMemcpy(h_out, d_conv1_out, conv1_size, cudaMemcpyDeviceToHost);
     
-    save_image("./out.png", h_out, pool1_h, pool1_w);
+    save_image("./out.png", h_out, conv1_h, conv1_w);
     //delete[] h_full_out;
     delete[] h_out;
     delete[] fc_mat;

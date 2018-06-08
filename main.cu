@@ -672,10 +672,13 @@ int main(int argc, char* argv[]) {
     
 
 
-    //float* h_out = new float[out_size];
-    //cudaMemcpy(h_out, d_out, out_size, cudaMemcpyDeviceToHost);
-   
-    //delete[] h_out;
+    float* h_out = new float[out_size];
+    cudaMemcpy(h_out, d_out, out_size, cudaMemcpyDeviceToHost);
+    
+    for(int i = 0; i < 10; i++)
+        std::cout << h_out[i] << std::endl;
+    
+    delete[] h_out;
     delete[] fc_mat;
 
     cudaFree(d_input);

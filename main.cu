@@ -422,6 +422,8 @@ int main(int argc, char* argv[]) {
 
     // dropout layer descriptors -------------------------------------------------------------
 
+    //void* states;
+
     cudnnDropoutDescriptor_t drop_desc;
     checkCUDNN(cudnnCreateDropoutDescriptor(&drop_desc));
     checkCUDNN(cudnnSetDropoutDescriptor(drop_desc,
@@ -434,6 +436,10 @@ int main(int argc, char* argv[]) {
     size_t drop_size{0};
     checkCUDNN(cudnnDropoutGetReserveSpaceSize(fc_out_desc,
                                     /*sizeInBytes=*/&drop_size));
+
+    //size_t drop_state_size{0};
+    //checkCUDNN(cudnnDropoutGetStatesSize(cudnn,
+    //                                    &drop_state_size));
 
     cudnnTensorDescriptor_t drop_out_desc;
     checkCUDNN(cudnnCreateTensorDescriptor(&drop_out_desc));
@@ -644,16 +650,8 @@ int main(int argc, char* argv[]) {
     // dropout layer -----------------------------------------------
 
 
-    checkCUDNN(cudnnDropoutForward(cudnn,
-                                   drop_desc,
-                                   fc_out_desc,
-                                   d_fully_con_out,
-                                   drop_out_desc,
-                                   d_drop_out,
-                                   d_reserve,
-                                   drop_size));
-
-        // output layer --------------------------------------------------------------------------
+ 
+    // output layer --------------------------------------------------------------------------
     // map 1024 features to 10 classes (one for each digit)
 
     cublas_status = cublasSgemm(cublas_handle,
@@ -663,7 +661,7 @@ int main(int argc, char* argv[]) {
                                 /*n=*/1024,
                                 /*k=*/10,
                                 /*alpha=*/&alpha,
-                                /*A=*/d_drop_out,
+                                /*A=*/d_fully_con_out,
                                 /*lda=*/1,
                                 /*B=*/d_out_mat,
                                 /*ldb=*/1024,

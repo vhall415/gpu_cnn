@@ -103,32 +103,29 @@ int main(int argc, char* argv[]) {
     // fully connected layer weights
     // 3136x1024
     f = fopen("./weights/var4_0.txt", "r");
-    float *full[1024] = new float[3136][1024];
-    for(int row = 0; row < 1568; row++) {
-        for(int col = 0; col < 1024; col++) {
-            if(fgets(buf,1000,f) != NULL)
-                full[row][col] = atof(buf);
-        }
-    }
     float *fully_con = new float[3136*1024];
     for(int i = 0; i < 1568*1024; i++) {
-	//if(fgets(buf,1000,f) != NULL)
-	  //  fully_con[i] = atof(buf);
-    //}
+	if(fgets(buf,1000,f) != NULL)
+	    fully_con[i] = atof(buf);
+    }
     fclose(f);
 
     f = fopen("./weights/var4_1.txt", "r");
-    for(int row = 1568; row < 3136; row++) {
-        for(int col = 0; col < 1024; col++) {
-            if(fgets(buf,1000,f) != NULL)
-                full[row][col] = atof(buf);
-        }
+    for(int i = 1568*1024; i < 3136*1024; i++) {
+	if(fgets(buf,1000,f) != NULL)
+	    fully_con[i] = atof(buf);
     }
-    // for(int i = 1568*1024; i < 3136*1024; i++) {
-	//if(fgets(buf,1000,f) != NULL)
-	//    fully_con[i] = atof(buf);
-    //}
     fclose(f);
+
+    float (*fc_mat)[1024] = new float[3136][1024];
+
+    for(int row = 0; row < 3136; row++) {
+	for(int col = 0; col < 1024; col++) {
+	    fc_mat[row][col] = fully_con[1024*row+col];
+	}
+    }
+
+    delete[] fully_con;
 
     // fully connected layer bias
     // 1024
@@ -580,7 +577,7 @@ int main(int argc, char* argv[]) {
     //cudaMemcpy(h_out, d_out, out_size, cudaMemcpyDeviceToHost);
    
     //delete[] h_out;
-    delete[] fully_con;
+    delete[] fc_mat;
 
     cudaFree(d_input);
     cudaFree(d_kernel_conv1);

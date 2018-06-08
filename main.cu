@@ -8,13 +8,14 @@
 #include <cublas_v2.h>
 
 // function to check for errors
-#define checkCUDNN(expression) \
-{                                \
+#define checkCUDNN(expression) 					\
+{                                				\
     cudnnStatus_t status = (expression);                        \
-    if(status != CUDNN_STATUS_SUCCESS) {                        \
-        std::cerr << "Error on line " << __LINE__ < ": " << cudnnGetErrorString(status) << std::endl;  \
-        std::exit(EXIT_FAILURE);                                \
-    }                                                           \
+    if(status != CUDNN_STATUS_SUCCESS) { 			\
+	std::cerr << "Error on line " << __LINE__ << ": "	\
+		  << cudnnGetErrorString(status) << std::endl;	\
+	std::exit(EXIT_FAILURE);				\
+    }	\
 }
 
 // use opencv to load/save an image from a path
@@ -146,25 +147,25 @@ int main(int argc, char* argv[]) {
 
     // create handle for cudnn
     cudnnHandle_t cudnn;
-    cudnnCreate(&cudnn);
+    checkCUDNN(cudnnCreate(&cudnn));
 
     // conv 1 descriptors --------------------------------------------------------------------
 
     // create/set input tensor descriptor
     cudnnTensorDescriptor_t in_desc;
-    /*checkCUDNN(*/cudnnCreateTensorDescriptor(&in_desc);
-    /*checkCUDNN(*/cudnnSetTensor4dDescriptor(in_desc,
+    checkCUDNN(cudnnCreateTensorDescriptor(&in_desc));
+    checkCUDNN(cudnnSetTensor4dDescriptor(in_desc,
                                           /*format=*/CUDNN_TENSOR_NHWC,
                                           /*dataType=*/CUDNN_DATA_FLOAT,
                                           /*batch_size=*/BATCH,
                                           /*channels=*/IN_CHANNELS,
                                           /*image_height=*/img.rows,
-                                          /*image_width=*/img.cols);
+                                          /*image_width=*/img.cols));
     
     // create kernel descriptor
     cudnnFilterDescriptor_t conv1_kernel_desc;
-    /*checkCUDNN(*/cudnnCreateFilterDescriptor(&conv1_kernel_desc);
-    /*checkCUDNN(*/cudnnSetFilter4dDescriptor(conv1_kernel_desc,
+    checkCUDNN(cudnnCreateFilterDescriptor(&conv1_kernel_desc);
+    checkCUDNN(cudnnSetFilter4dDescriptor(conv1_kernel_desc,
                                           /*dataType=*/CUDNN_DATA_FLOAT,
                                           /*format=*/CUDNN_TENSOR_NCHW,
                                           /*out_channels=*/32,
@@ -174,8 +175,8 @@ int main(int argc, char* argv[]) {
 
     // create convolution descriptor
     cudnnConvolutionDescriptor_t conv1_desc;
-    /*checkCUDNN(*/cudnnCreateConvolutionDescriptor(&conv1_desc);
-    /*checkCUDNN(*/cudnnSetConvolution2dDescriptor(conv1_desc,
+    checkCUDNN(*/cudnnCreateConvolutionDescriptor(&conv1_desc);
+    checkCUDNN(*/cudnnSetConvolution2dDescriptor(conv1_desc,
                                                /*pad_height=*/2,
                                                /*pad_width=*/2,
                                                /*vertical_stride=*/1,
@@ -187,7 +188,7 @@ int main(int argc, char* argv[]) {
 
     // initialize variables for convolution 1 output dimensions
     int conv1_batch{0}, conv1_chan{0}, conv1_h{0}, conv1_w{0};
-    /*checkCUDNN(*/cudnnGetConvolution2dForwardOutputDim(conv1_desc,
+    checkCUDNN(*/cudnnGetConvolution2dForwardOutputDim(conv1_desc,
                                                      in_desc,
                                                      conv1_kernel_desc,
                                                      &conv1_batch,
@@ -199,8 +200,8 @@ int main(int argc, char* argv[]) {
 
     // create output tensor descriptors
     cudnnTensorDescriptor_t conv1_out_desc;
-    /*checkCUDNN(*/cudnnCreateTensorDescriptor(&conv1_out_desc);
-    /*checkCUDNN(*/cudnnSetTensor4dDescriptor(conv1_out_desc,
+    checkCUDNN(*/cudnnCreateTensorDescriptor(&conv1_out_desc);
+    checkCUDNN(*/cudnnSetTensor4dDescriptor(conv1_out_desc,
                                           /*format=*/CUDNN_TENSOR_NHWC,
                                           /*dataType=*/CUDNN_DATA_FLOAT,
                                           /*batch_size=*/conv1_batch,
@@ -210,7 +211,7 @@ int main(int argc, char* argv[]) {
 
     // get forward convolution algorithm
     cudnnConvolutionFwdAlgo_t conv1_alg;
-    /*checkCUDNN(*/cudnnGetConvolutionForwardAlgorithm(cudnn,
+    checkCUDNN(*/cudnnGetConvolutionForwardAlgorithm(cudnn,
                                                    in_desc,
                                                    conv1_kernel_desc,
                                                    conv1_desc,
@@ -221,7 +222,7 @@ int main(int argc, char* argv[]) {
     
     // get forward convolution workspace size
     size_t conv1_work{0};
-    /*checkCUDNN(*/cudnnGetConvolutionForwardWorkspaceSize(cudnn,
+    checkCUDNN(*/cudnnGetConvolutionForwardWorkspaceSize(cudnn,
                                                        in_desc,
                                                        conv1_kernel_desc,
                                                        conv1_desc,
@@ -635,7 +636,7 @@ int main(int argc, char* argv[]) {
                         drop_out_desc,
                         d_drop_out,
                         d_reserve,
-                        &drop_size);
+                        drop_size);
 
     // output layer --------------------------------------------------------------------------
     // map 1024 features to 10 classes (one for each digit)
@@ -659,10 +660,10 @@ int main(int argc, char* argv[]) {
     
 
 
-    float* h_out = new float[out_size];
-    cudaMemcpy(h_out, d_out, out_size, cudaMemcpyDeviceToHost);
+    //float* h_out = new float[out_size];
+    //cudaMemcpy(h_out, d_out, out_size, cudaMemcpyDeviceToHost);
    
-    delete[] h_out;
+    //delete[] h_out;
     cudaFree(d_input);
     cudaFree(d_kernel_conv1);
     cudaFree(d_conv1_work);

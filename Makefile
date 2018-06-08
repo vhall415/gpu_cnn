@@ -10,7 +10,7 @@ all: main
 
 main: $(TARGET).cu
 		$(CXX) $(CXXFLAGS) $(HEADERS) $(LIBS) $(TARGET).cu -o $(TARGET) \
-		-lcudnn -lopencv_imgproc -lopencv_core
+		-lcudnn -lcublas -lopencv_imgproc -lopencv_core
 
 .phony: clean
 

@@ -103,18 +103,31 @@ int main(int argc, char* argv[]) {
     // fully connected layer weights
     // 3136x1024
     f = fopen("./weights/var4_0.txt", "r");
+    float *full[1024] = new float[3136][1024];
+    for(int row = 0; row < 1568; row++) {
+        for(int col = 0; col < 1024; col++) {
+            if(fgets(buf,1000,f) != NULL)
+                full[row][col] = atof(buf);
+        }
+    }
     float *fully_con = new float[3136*1024];
     for(int i = 0; i < 1568*1024; i++) {
-	if(fgets(buf,1000,f) != NULL)
-	    fully_con[i] = atof(buf);
-    }
+	//if(fgets(buf,1000,f) != NULL)
+	  //  fully_con[i] = atof(buf);
+    //}
     fclose(f);
 
     f = fopen("./weights/var4_1.txt", "r");
-     for(int i = 1568*1024; i < 3136*1024; i++) {
-	if(fgets(buf,1000,f) != NULL)
-	    fully_con[i] = atof(buf);
+    for(int row = 1568; row < 3136; row++) {
+        for(int col = 0; col < 1024; col++) {
+            if(fgets(buf,1000,f) != NULL)
+                full[row][col] = atof(buf);
+        }
     }
+    // for(int i = 1568*1024; i < 3136*1024; i++) {
+	//if(fgets(buf,1000,f) != NULL)
+	//    fully_con[i] = atof(buf);
+    //}
     fclose(f);
 
     // fully connected layer bias
@@ -154,7 +167,7 @@ int main(int argc, char* argv[]) {
     cudnnHandle_t cudnn;
     checkCUDNN(cudnnCreate(&cudnn));
 
-    // conv 1 descriptors --------------------------------------------------------------------
+    // conv 1 descriptors -------------------------------------------------------------------
 
     // create/set input tensor descriptor
     cudnnTensorDescriptor_t in_desc;
